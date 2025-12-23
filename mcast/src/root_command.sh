@@ -4,7 +4,7 @@ filename="$(date +"$filename_pattern")"
 filepath="$output_dir/$filename"
 mkdir -p "$output_dir"
 if [[ ${args[--region]} ]]; then
-  wf-recorder -g "$(slurp)" -f "$filepath"
+  wf-recorder -g "$(slurp -d)" -f "$filepath"
 else
   wf-recorder -f "$filepath"
 fi

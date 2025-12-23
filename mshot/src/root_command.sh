@@ -29,7 +29,7 @@ if [[ $window_capture == true ]]; then
   fi
   cmd="$cmd -g \"$geometry\""
 elif [[ ${args[--region]} ]]; then
-  cmd="$cmd -g \"\$(slurp)\""
+  cmd="$cmd -g \"\$(slurp -d)\""
 fi
 cmd="$cmd \"$filepath\"'"
 if [[ ${args[--annotate]} ]]; then
