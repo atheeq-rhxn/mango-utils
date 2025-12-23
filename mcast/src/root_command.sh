@@ -8,4 +8,4 @@ if [[ ${args[--region]} ]]; then
 else
   wf-recorder -f "$filepath"
 fi
-notify-send "Recording saved" "$filepath"
+notify-send "Recording saved" "Recording saved in <i>${filepath}</i>." -a mcast

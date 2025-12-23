@@ -38,5 +38,8 @@ fi
 eval "$cmd"
 if [[ $copy_enabled == true ]]; then
   wl-copy < "$filepath"
+  message="Image saved in <i>${filepath}</i> and copied to the clipboard."
+else
+  message="Image saved in <i>${filepath}</i>."
 fi
-notify-send "Screenshot saved" "$filepath"
+notify-send "Screenshot saved" "${message}" -i "${filepath}" -a mshot
