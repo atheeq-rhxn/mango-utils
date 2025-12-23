@@ -1,0 +1,16 @@
+name: mcast
+help: Mango cast cli tool
+version: 0.1.0
+
+flags:
+- long: --region
+  short: -r
+  help: Record selected region
+- long: --output
+  short: -o
+  arg: directory
+  help: Output directory for recording
+- long: --filename
+  short: -f
+  arg: name
+  help: Output filename for recording

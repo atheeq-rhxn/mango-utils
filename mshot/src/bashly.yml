@@ -1,0 +1,22 @@
+name: mshot
+help: Mango shot cli tool
+version: 0.1.0
+
+flags:
+- long: --region
+  short: -r
+  help: Take screenshot of selected region
+- long: --cursor
+  short: -c
+  help: Include cursor in screenshot
+- long: --output
+  short: -o
+  arg: directory
+  help: Output directory for screenshot
+- long: --filename
+  short: -f
+  arg: name
+  help: Output filename for screenshot
+- long: --annotate
+  short: -a
+  help: Annotate the screenshot with Satty
