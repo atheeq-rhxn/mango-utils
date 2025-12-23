@@ -20,3 +20,6 @@ flags:
 - long: --annotate
   short: -a
   help: Annotate the screenshot with Satty
+- long: --window
+  short: -w
+  help: Capture screenshot of the active window

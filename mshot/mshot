@@ -23,11 +23,22 @@ root_command() {
   if [[ $cursor_default == true ]] || [[ ${args[--cursor]} ]]; then
     cursor_enabled=true
   fi
+  window_capture=false
+  if [[ ${args[--window]} ]]; then
+    window_capture=true
+  fi
   if [[ $cursor_enabled == true ]]; then
     cmd="$cmd -p"
   fi
   cmd="$cmd -c 'grim"
-  if [[ ${args[--region]} ]]; then
+  if [[ $window_capture == true ]]; then
+    geometry=$(mmsg -x | awk '/x / {x=$3} /y / {y=$3} /width / {w=$3} /height / {h=$3} END {print x","y" "w"x"h}')
+    if [[ -z "$geometry" ]]; then
+      echo "Error: No active window found or mmsg failed." >&2
+      exit 1
+    fi
+    cmd="$cmd -g \"$geometry\""
+  elif [[ ${args[--region]} ]]; then
     cmd="$cmd -g \"\$(slurp)\""
   fi
   cmd="$cmd \"$filepath\"'"
@@ -35,7 +46,7 @@ root_command() {
     cmd="$cmd && satty --filename \"$filepath\" --output-filename \"$filepath\" --actions-on-enter save-to-file --early-exit --disable-notifications"
   fi
   eval "$cmd"
-  notify-send "Screenshot saved in" "$filepath"
+  notify-send "Screenshot saved" "$filepath"
 
 }
 
@@ -83,6 +94,11 @@ mshot_usage() {
     # :flag.usage
     printf "  %s\n" "--annotate, -a"
     printf "    Annotate the screenshot with Satty\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "--window, -w"
+    printf "    Capture screenshot of the active window\n"
     echo
 
     # :command.usage_fixed_flags
@@ -323,6 +339,14 @@ parse_requirements() {
 
         # :flag.case_no_arg
         args['--annotate']=1
+        shift
+        ;;
+
+      # :flag.case
+      --window | -w)
+
+        # :flag.case_no_arg
+        args['--window']=1
         shift
         ;;
 

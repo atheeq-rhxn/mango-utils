@@ -9,11 +9,22 @@ cursor_enabled=false
 if [[ $cursor_default == true ]] || [[ ${args[--cursor]} ]]; then
   cursor_enabled=true
 fi
+window_capture=false
+if [[ ${args[--window]} ]]; then
+  window_capture=true
+fi
 if [[ $cursor_enabled == true ]]; then
   cmd="$cmd -p"
 fi
 cmd="$cmd -c 'grim"
-if [[ ${args[--region]} ]]; then
+if [[ $window_capture == true ]]; then
+  geometry=$(mmsg -x | awk '/x / {x=$3} /y / {y=$3} /width / {w=$3} /height / {h=$3} END {print x","y" "w"x"h}')
+  if [[ -z "$geometry" ]]; then
+    echo "Error: No active window found or mmsg failed." >&2
+    exit 1
+  fi
+  cmd="$cmd -g \"$geometry\""
+elif [[ ${args[--region]} ]]; then
   cmd="$cmd -g \"\$(slurp)\""
 fi
 cmd="$cmd \"$filepath\"'"
