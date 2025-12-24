@@ -12,7 +12,10 @@ Utilities that interact with **mango IPC (mmsg)** to provide a better experience
 
 ### `mcast`
 
-* **Required**: `wf-recorder`, `slurp`, `notify-send`
+* **Required**:
+  - One of: `wf-recorder`, `wl-screenrec`, `gpu-screen-recorder`
+  - `slurp`
+  - `notify-send`
 
 ### `mshot`
 
@@ -37,6 +40,8 @@ curl -fsSL https://raw.githubusercontent.com/atheeq-rhxn/mango-utils/main/instal
 | Tool | Flag | Argument | Description |
 | --- | --- | --- | --- |
 | **mcast** | `-r`, `--region` | - | Record a selected screen region |
+|  | `-b`, `--backend` | `RECORDER` | Backend:<br>wf-recorder<br>wl-screenrec<br>gpu-screen-recorder |
+|  | `-t`, `--toggle` | - | Toggle recording on/off |
 |  | `-o`, `--output` | `DIRECTORY` | Set the output directory |
 |  | `-f`, `--filename` | `NAME` | Set the output filename/pattern |
 | **mshot** | `-r`, `--region` | - | Screenshot a selected region |
@@ -51,19 +56,24 @@ curl -fsSL https://raw.githubusercontent.com/atheeq-rhxn/mango-utils/main/instal
 ## Mangowc Example Keybindings
 
 ```ini
-# Fullscreen (copied to clipboard and saved)
+# Screenshot: Fullscreen (copied to clipboard and saved)
 bind=none,Print,spawn_shell,mshot
 
-# Selected region
+# Screenshot: Selected region
 bind=SHIFT,Print,spawn_shell,mshot -r
 
-# Active window
+# Screenshot: Active window
 bind=ALT,Print,spawn_shell,mshot -w
 
-# Region with immediate annotation
+# Screenshot: Region with immediate annotation
 bind=SHIFT+ALT,Print,spawn_shell,mshot -ra
+
+# Screencast: Toggle fullscreen recording
+bind=none,F12,spawn_shell,mcast --toggle
+
+# Screencast: Toggle region recording
+bind=SHIFT,F12,spawn_shell,mcast --toggle --region
 ```
-> Note: currently keybind for stopping screen recording not implemented. If needed to try screenrecording do from the tty.
 
 ## Configuration
 
