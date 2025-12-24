@@ -6,6 +6,11 @@ flags:
 - long: --region
   short: -r
   help: Record selected region
+- long: --backend
+  short: -b
+  arg: recorder
+  allowed: [wf-recorder, wl-screenrec, gpu-screen-recorder]
+  help: Screen recorder backend to use
 - long: --output
   short: -o
   arg: directory
