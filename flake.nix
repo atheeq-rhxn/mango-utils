@@ -16,7 +16,7 @@
   in
   {
     overlays.default = final: prev: {
-      msnap = final.callPackage "${msnap-src}/nix/msnap.nix" {};
+      msnap = final.callPackage ./nix/msnap.nix {};
     };
 
     packages = forAllSystems (pkgs:
