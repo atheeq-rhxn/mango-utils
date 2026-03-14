@@ -58,7 +58,8 @@ sudo cp msnap.nix /etc/nixos
 environment.systemPackages = with pkgs; [
   (pkgs.callPackage ./msnap.nix {})
   # Your other packages
-];```
+];
+```
 
 ### Uninstall
 
