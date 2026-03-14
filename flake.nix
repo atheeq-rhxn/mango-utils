@@ -33,4 +33,5 @@
             programs.msnap.package = lib.mkDefault msnapPkg;
           };
         };
+      };  
 }
