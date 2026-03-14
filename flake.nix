@@ -6,7 +6,7 @@
     msnap-src.url = "github:lptlv/msnap";
   };
 
-  outputs = { self, nixpkgs, msnap }:
+  outputs = { self, nixpkgs, msnap-src }:
   let
     systems = [ "x86_64-linux" "aarch64-linux" ];
 
