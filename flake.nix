@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    msnapsrc.url = "github:lptlv/msnap";
+    msnap-src.url = "github:lptlv/msnap";
   };
 
   outputs = { self, nixpkgs, msnap }:
@@ -16,7 +16,7 @@
   in
   {
     overlays.default = final: prev: {
-      msnap = final.callPackage "${"msnapsrc"}/nix/msnap.nix" {};
+      msnap = final.callPackage "${msnap-src}/nix/msnap.nix" {};
     };
 
     packages = forAllSystems (pkgs:
