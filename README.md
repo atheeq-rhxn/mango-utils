@@ -44,6 +44,23 @@ sudo make install PREFIX=/usr
 
 > `PREFIX=/usr` is recommended — icons and the desktop entry won't integrate correctly with `/usr/local`.
 
+### NixOS install
+
+1. Add the Nix derivation in your NixOS directory
+```sh
+git clone https://github.com/atheeq-rhxn/msnap.git
+cd msnap
+sudo cp msnap.nix /etc/nixos
+```
+
+2. Install the package by editing /etc/nixos/configuration.nix. Should look like this:
+```nix
+environment.systemPackages = with pkgs; [
+  (pkgs.callPackage ./msnap.nix {})
+  # Your other packages
+];
+```
+
 ### Uninstall
 
 ```sh
