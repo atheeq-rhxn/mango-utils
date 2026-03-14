@@ -3,35 +3,43 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-parts.url = "github:hercules-ci/flake-parts";
   };
 
-  outputs = { self, nixpkgs }:
-    let
-      forAllSystems = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" ];
-    in
-      {
-        packages = forAllSystems (system: {
-          default = nixpkgs.${system}.callPackage ./nix/msnap.nix { };
-      });
+  outputs = { self, flake-parts, nixpkgs } @ inputs:
+      flake-parts.lib.mkFlake {inherit inputs;} {
+      imports = [
+        inputs.flake-parts.flakeModules.easyOverlay
+      ];
 
-      apps = forAllSystems (system: {
-        default = {
-          type = "app";
-          program = "${self.packages.${system}.default}/bin/msnap";
+      flake = {
+        nixosModules.msnap = import ./nix/nixos-modules.nix self;
+      };
+
+      perSystem = {
+        config,
+        pkgs,
+        ...
+      }: let
+        inherit (pkgs) callPackage ;
+        msnap = callPackage ./nix/msnap.nix {};
+        shellOverride = old: {
+          nativeBuildInputs = old.nativeBuildInputs ++ [];
+          buildInputs = old.buildInputs ++ [];
         };
-      });
-
-      nixosModules.default = { config, lib, pkgs, ... }:
-        let
-          cfg = config.programs.msnap;
-          msnapPkg = self.packages.${pkgs.system}.default;
-        in
-          {
-          imports = [ ./nix/nixos-module.nix ];
-
-          config = lib.mkIf cfg.enable {
-            programs.msnap.package = lib.mkDefault msnapPkg;
-          };
+      in {
+        packages.default = msnap;
+        overlayAttrs = {
+          inherit (config.packages) msnap;
         };
-      };  
+        packages = {
+          inherit msnap;
+        };
+        devShells.default = msnap.overrideAttrs shellOverride;
+      };
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
+    };
 }
