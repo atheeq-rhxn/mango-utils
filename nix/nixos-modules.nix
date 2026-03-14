@@ -1,4 +1,4 @@
-self: { config, lib, ... }:
+self: { config, lib, pkgs, ... }:
 
 with lib;
 
@@ -7,16 +7,17 @@ let
 in
 {
   options.programs.msnap = {
-    enable = mkEnableOption "msnap program";
+    enable = lib.mkEnableOption "msnap, a mangowm screenshot tool";
 
-    package = mkOption {
-      type = types.package;
-      defaultText = literalExpression "pkgs.msnap";
-      description = "The msnap package";
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = self.packages.${pkgs.stdenv.hostPlatform.system}.msnap;
+      description = "The msnap package to use";
     };
   };
+};
 
-  config = mkIf cfg.enable {
+config = mkIf cfg.enable {
     environment.systemPackages = [ cfg.package ];
   };
 }
