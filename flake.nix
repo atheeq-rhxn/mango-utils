@@ -3,10 +3,9 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    msnap-src.url = "github:lptlv/msnap";
   };
 
-  outputs = { self, nixpkgs, msnap-src }:
+  outputs = { self, nixpkgs }:
   let
     systems = [ "x86_64-linux" "aarch64-linux" ];
 
