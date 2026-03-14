@@ -1,5 +1,5 @@
 {
-  description = "";
+  description = "Screenshot and screencast utility for mangowm";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
