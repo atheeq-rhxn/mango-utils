@@ -46,18 +46,23 @@ sudo make install PREFIX=/usr
 
 ### NixOS install
 
-Add msnap in your flake.nix:
+Add msnap's input in `flake.nix`:
 ```nix
-inputs = {
-  nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-  msnap = {
-    url = "github:atheeq-rhxn/msnap";
-    inputs.nixpkgs.follows = "nixpkgs";
+    msnap = {
+      url = "github:atheeq-rhxn/msnap";
+      inputs.nixpkgs.follows = "nixpkgs";
+
+    # Your other inputs...
+    };
   };
+}
 ```
 
-Install the package by editing your configuration.nix.
+Install it by editing `configuration.nix`.
 ```nix
 environment.systemPackages = with pkgs; [
   inputs.msnap.packages.${pkgs.system}.default
