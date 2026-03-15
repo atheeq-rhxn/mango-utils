@@ -55,9 +55,9 @@ Add msnap's input in `flake.nix`:
     msnap = {
       url = "github:atheeq-rhxn/msnap";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # Your other inputs...
-    };
   };
 }
 ```
