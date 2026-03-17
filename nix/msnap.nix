@@ -16,12 +16,12 @@
 }:
 stdenvNoCC.mkDerivation rec {
   pname = "msnap";
-  version = "0.2.1";
+  version = "0.2.2";
   src = fetchFromGitHub {
     owner = "atheeq-rhxn";
     repo = "msnap";
     rev = "v${version}";
-    hash = "sha256-Qf5YTk9md2BkLJ58fRby/XBuqyBh7GlC0/kc1ppcen8=";
+    hash = "sha256-evEojvvDxO/0vzlzvrYnqAh8/C/SC8GFDJWQV9vC+68=";
   };
   nativeBuildInputs = [ makeWrapper ];
   dontConfigure = true;
