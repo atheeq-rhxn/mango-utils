@@ -1,6 +1,5 @@
 output_dir="${args[--output]:-${ini[cast_output_dir]:-${XDG_VIDEOS_DIR:-$HOME/Videos}/Screencasts}}"
 filename_pattern="${args[--filename]:-${ini[cast_filename_pattern]:-%Y%m%d%H%M%S.mp4}}"
-toggle_mode="${args[--toggle]:-}"
 recording_pid_file="/tmp/msnap-cast.pid"
 recording_filepath_file="/tmp/msnap-cast.filepath"
 
@@ -29,33 +28,24 @@ build_cmd() {
   cmd+=(-o "$filepath")
 }
 
-if [[ -n "$toggle_mode" ]]; then
-  if [[ -f "$recording_pid_file" ]]; then
-    pid=$(<"$recording_pid_file")
-    if kill -0 "$pid" 2>/dev/null; then
-      kill -2 "$pid"
-      wait "$pid" 2>/dev/null || true
-    fi
-    rm -f "$recording_pid_file"
-    if [[ -f "$recording_filepath_file" ]]; then
-      filepath=$(<"$recording_filepath_file")
-      rm -f "$recording_filepath_file"
-      notify_saved "$filepath" "Recording saved in <i>${filepath}</i>." "cast"
-    fi
-  else
-    filename="$(date +"$filename_pattern")"
-    filepath="$output_dir/$filename"
-    mkdir -p "$output_dir"
-    echo "$filepath" > "$recording_filepath_file"
-    build_cmd
-    "${cmd[@]}" > /dev/null 2>&1 &
-    echo $! > "$recording_pid_file"
+if [[ -f "$recording_pid_file" ]]; then
+  pid=$(<"$recording_pid_file")
+  if kill -0 "$pid" 2>/dev/null; then
+    kill -2 "$pid"
+    wait "$pid" 2>/dev/null || true
+  fi
+  rm -f "$recording_pid_file"
+  if [[ -f "$recording_filepath_file" ]]; then
+    filepath=$(<"$recording_filepath_file")
+    rm -f "$recording_filepath_file"
+    notify_saved "$filepath" "Recording saved in <i>${filepath}</i>." "cast"
   fi
 else
   filename="$(date +"$filename_pattern")"
   filepath="$output_dir/$filename"
   mkdir -p "$output_dir"
+  echo "$filepath" > "$recording_filepath_file"
   build_cmd
-  "${cmd[@]}"
-  notify_saved "$filepath" "Recording saved in <i>${filepath}</i>." "cast"
+  "${cmd[@]}" > /dev/null 2>&1 &
+  echo $! > "$recording_pid_file"
 fi

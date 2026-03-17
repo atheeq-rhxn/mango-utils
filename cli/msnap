@@ -151,7 +151,7 @@ msnap_cast_usage() {
     echo
 
     # :flag.usage
-    printf "  %s\n" "--toggle, -t"
+    printf "  %s\n" "--toggle, -t (required)"
     printf "    Toggle recording on/off\n"
     echo
 
@@ -426,8 +426,8 @@ msnap_shot_command() {
 
   # src/shot_command.sh
   if [[ ${args[--only-copy]} ]]; then
-    filepath="$(mktemp --suffix=.png)"
-    trap 'rm -f "$filepath"' EXIT
+    filepath="$(mktemp -t msnap-XXXXXX.png)"
+    find "$(dirname "$filepath")" -maxdepth 1 -name "msnap-*.png" -mmin +5 -delete 2>/dev/null &
   else
     output_dir="${args[--output]:-${ini[shot_output_dir]:-${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots}}"
     filename_pattern="${args[--filename]:-${ini[shot_filename_pattern]:-%Y%m%d%H%M%S.png}}"
@@ -443,6 +443,10 @@ msnap_shot_command() {
   [[ $use_pointer ]] && cmd+=(-c)
 
   if [[ ${args[--window]} ]]; then
+    if ! command -v mmsg >/dev/null 2>&1; then
+      echo "missing dependency: mmsg (required for --window)" >&2
+      exit 1
+    fi
     geometry=$(mmsg -x | awk '/x / {x=$3} /y / {y=$3} /width / {w=$3} /height / {h=$3} END {print x","y" "w"x"h}')
     if [[ -z "$geometry" ]]; then
       echo "Error: No active window found or mmsg failed." >&2
@@ -454,24 +458,31 @@ msnap_shot_command() {
   fi
 
   if [[ ${args[--freeze]} ]]; then
+    if ! command -v wayfreeze >/dev/null 2>&1; then
+      echo "missing dependency: wayfreeze (required for --freeze)" >&2
+      exit 1
+    fi
     wayfreeze_cmd=(wayfreeze)
     [[ -z $use_pointer ]] && wayfreeze_cmd+=(--hide-cursor)
+    trap 'kill $wayfreeze_pid 2>/dev/null || true; rm -f "$pipe"' EXIT
+    pipe=$(mktemp -u).fifo
+    mkfifo "$pipe"
     if [[ ${args[--region]} ]]; then
-      "${wayfreeze_cmd[@]}" & PID=$!
-      sleep .1
+      "${wayfreeze_cmd[@]}" --after-freeze-cmd "echo > $pipe" &
+      wayfreeze_pid=$!
+      read -r < "$pipe"
       geometry=$(slurp -d)
-      if [[ -z "$geometry" ]]; then
-        kill $PID 2>/dev/null || true
-        exit 1
-      fi
+      [[ -z "$geometry" ]] && exit 1
       "${cmd[@]}" -g "$geometry" "$filepath"
-      kill $PID 2>/dev/null || true
     else
-      "${wayfreeze_cmd[@]}" & PID=$!
-      sleep .1
+      "${wayfreeze_cmd[@]}" --after-freeze-cmd "echo > $pipe" &
+      wayfreeze_pid=$!
+      read -r < "$pipe"
       "${cmd[@]}" "$filepath"
-      kill $PID 2>/dev/null || true
     fi
+    kill $wayfreeze_pid 2>/dev/null || true
+    rm -f "$pipe"
+    trap - EXIT
   elif [[ ${args[--region]} ]]; then
     geometry=$(slurp -d)
     [[ -z "$geometry" ]] && exit 1
@@ -507,7 +518,6 @@ msnap_cast_command() {
   # src/cast_command.sh
   output_dir="${args[--output]:-${ini[cast_output_dir]:-${XDG_VIDEOS_DIR:-$HOME/Videos}/Screencasts}}"
   filename_pattern="${args[--filename]:-${ini[cast_filename_pattern]:-%Y%m%d%H%M%S.mp4}}"
-  toggle_mode="${args[--toggle]:-}"
   recording_pid_file="/tmp/msnap-cast.pid"
   recording_filepath_file="/tmp/msnap-cast.filepath"
 
@@ -536,35 +546,26 @@ msnap_cast_command() {
     cmd+=(-o "$filepath")
   }
 
-  if [[ -n "$toggle_mode" ]]; then
-    if [[ -f "$recording_pid_file" ]]; then
-      pid=$(<"$recording_pid_file")
-      if kill -0 "$pid" 2>/dev/null; then
-        kill -2 "$pid"
-        wait "$pid" 2>/dev/null || true
-      fi
-      rm -f "$recording_pid_file"
-      if [[ -f "$recording_filepath_file" ]]; then
-        filepath=$(<"$recording_filepath_file")
-        rm -f "$recording_filepath_file"
-        notify_saved "$filepath" "Recording saved in <i>${filepath}</i>." "cast"
-      fi
-    else
-      filename="$(date +"$filename_pattern")"
-      filepath="$output_dir/$filename"
-      mkdir -p "$output_dir"
-      echo "$filepath" > "$recording_filepath_file"
-      build_cmd
-      "${cmd[@]}" > /dev/null 2>&1 &
-      echo $! > "$recording_pid_file"
+  if [[ -f "$recording_pid_file" ]]; then
+    pid=$(<"$recording_pid_file")
+    if kill -0 "$pid" 2>/dev/null; then
+      kill -2 "$pid"
+      wait "$pid" 2>/dev/null || true
+    fi
+    rm -f "$recording_pid_file"
+    if [[ -f "$recording_filepath_file" ]]; then
+      filepath=$(<"$recording_filepath_file")
+      rm -f "$recording_filepath_file"
+      notify_saved "$filepath" "Recording saved in <i>${filepath}</i>." "cast"
     fi
   else
     filename="$(date +"$filename_pattern")"
     filepath="$output_dir/$filename"
     mkdir -p "$output_dir"
+    echo "$filepath" > "$recording_filepath_file"
     build_cmd
-    "${cmd[@]}"
-    notify_saved "$filepath" "Recording saved in <i>${filepath}</i>." "cast"
+    "${cmd[@]}" > /dev/null 2>&1 &
+    echo $! > "$recording_pid_file"
   fi
 
 }
@@ -758,22 +759,6 @@ msnap_shot_parse_requirements() {
     missing_deps=1
   else
     deps['notify-send']="$(command -v notify-send | head -n1)"
-  fi
-
-  # :dependency.filter
-  if ! command -v mmsg >/dev/null 2>&1; then
-    printf "missing dependency: mmsg\n" >&2
-    missing_deps=1
-  else
-    deps['mmsg']="$(command -v mmsg | head -n1)"
-  fi
-
-  # :dependency.filter
-  if ! command -v wayfreeze >/dev/null 2>&1; then
-    printf "missing dependency: wayfreeze\n" >&2
-    missing_deps=1
-  else
-    deps['wayfreeze']="$(command -v wayfreeze | head -n1)"
   fi
 
   if [[ -n $missing_deps ]]; then
@@ -1128,6 +1113,12 @@ msnap_cast_parse_requirements() {
     esac
   done
 
+  # :command.required_flags_filter
+  if [[ -z ${args['--toggle']+x} ]]; then
+    printf "missing required flag: --toggle, -t\n" >&2
+    exit 1
+  fi
+
   # :command.validations
   # :flag.validations
   if [[ -v args['--geometry'] ]]; then
@@ -1209,25 +1200,14 @@ initialize() {
   # src/initialize.sh
   XDG_CONFIG_DIRS="${XDG_CONFIG_DIRS:-/etc/xdg}"
   config_home="${XDG_CONFIG_HOME:-${HOME}/.config}"
-  config_file=""
 
-  IFS=':' read -ra _sys_dirs <<< "$XDG_CONFIG_DIRS"
-  for dir in "$config_home" "${_sys_dirs[@]}"; do
+  IFS=':' read -ra _dirs <<< "$config_home:$XDG_CONFIG_DIRS"
+  for dir in "${_dirs[@]}"; do
     if [[ -f "$dir/msnap/msnap.conf" ]]; then
-      config_file="$dir/msnap/msnap.conf"
+      ini_load "$dir/msnap/msnap.conf"
       break
     fi
   done
-
-  if [[ -z "$config_file" ]]; then
-    mkdir -p "$config_home/msnap"
-    cp "./msnap.conf" "$config_home/msnap/msnap.conf"
-    config_file="$config_home/msnap/msnap.conf"
-  fi
-
-  CONFIG_FILE="$config_file"
-  ini_load "$config_file"
-
 }
 
 # :command.run

@@ -3,6 +3,7 @@ DESTDIR ?=
 BINDIR ?= $(PREFIX)/bin
 DATADIR ?= $(PREFIX)/share
 SYSCONFDIR ?= /etc/xdg
+ICON_PATH ?= $(DATADIR)/icons/hicolor/scalable/apps/msnap.svg
 
 # Installation Directories
 APP_DIR = $(DESTDIR)$(DATADIR)/msnap
@@ -17,7 +18,8 @@ all: build
 
 build:
 	@echo "Generating files..."
-	sed "s|@GUI_PATH@|$(DATADIR)/msnap/gui|g" assets/msnap.desktop.in > msnap.desktop
+	sed "s|@GUI_PATH@|$(DATADIR)/msnap/gui|g" assets/msnap.desktop.in | \
+		sed "s|@ICON_PATH@|$(ICON_PATH)|g" > msnap.desktop
 	sed "s|@BIN_PATH@|$(BINDIR)/msnap|g" gui/Config.qml > Config.qml.build
 	sed "s|@GUI_PATH@|$(DATADIR)/msnap/gui|g" cli/msnap > msnap.build
 

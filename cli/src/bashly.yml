@@ -10,8 +10,6 @@ commands:
     - slurp
     - wl-copy
     - notify-send
-    - mmsg
-    - wayfreeze
   flags:
   - long: --region
     short: -r
@@ -72,6 +70,7 @@ commands:
   - long: --toggle
     short: -t
     help: Toggle recording on/off
+    required: true
   - long: --output
     short: -o
     arg: directory

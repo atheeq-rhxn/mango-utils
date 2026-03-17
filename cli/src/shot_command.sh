@@ -1,6 +1,6 @@
 if [[ ${args[--only-copy]} ]]; then
-  filepath="$(mktemp --suffix=.png)"
-  trap 'rm -f "$filepath"' EXIT
+  filepath="$(mktemp -t msnap-XXXXXX.png)"
+  find "$(dirname "$filepath")" -maxdepth 1 -name "msnap-*.png" -mmin +5 -delete 2>/dev/null &
 else
   output_dir="${args[--output]:-${ini[shot_output_dir]:-${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots}}"
   filename_pattern="${args[--filename]:-${ini[shot_filename_pattern]:-%Y%m%d%H%M%S.png}}"
@@ -16,6 +16,10 @@ use_pointer=""
 [[ $use_pointer ]] && cmd+=(-c)
 
 if [[ ${args[--window]} ]]; then
+  if ! command -v mmsg >/dev/null 2>&1; then
+    echo "missing dependency: mmsg (required for --window)" >&2
+    exit 1
+  fi
   geometry=$(mmsg -x | awk '/x / {x=$3} /y / {y=$3} /width / {w=$3} /height / {h=$3} END {print x","y" "w"x"h}')
   if [[ -z "$geometry" ]]; then
     echo "Error: No active window found or mmsg failed." >&2
@@ -27,24 +31,31 @@ elif [[ ${args[--geometry]} ]]; then
 fi
 
 if [[ ${args[--freeze]} ]]; then
+  if ! command -v wayfreeze >/dev/null 2>&1; then
+    echo "missing dependency: wayfreeze (required for --freeze)" >&2
+    exit 1
+  fi
   wayfreeze_cmd=(wayfreeze)
   [[ -z $use_pointer ]] && wayfreeze_cmd+=(--hide-cursor)
+  trap 'kill $wayfreeze_pid 2>/dev/null || true; rm -f "$pipe"' EXIT
+  pipe=$(mktemp -u).fifo
+  mkfifo "$pipe"
   if [[ ${args[--region]} ]]; then
-    "${wayfreeze_cmd[@]}" & PID=$!
-    sleep .1
+    "${wayfreeze_cmd[@]}" --after-freeze-cmd "echo > $pipe" &
+    wayfreeze_pid=$!
+    read -r < "$pipe"
     geometry=$(slurp -d)
-    if [[ -z "$geometry" ]]; then
-      kill $PID 2>/dev/null || true
-      exit 1
-    fi
+    [[ -z "$geometry" ]] && exit 1
     "${cmd[@]}" -g "$geometry" "$filepath"
-    kill $PID 2>/dev/null || true
   else
-    "${wayfreeze_cmd[@]}" & PID=$!
-    sleep .1
+    "${wayfreeze_cmd[@]}" --after-freeze-cmd "echo > $pipe" &
+    wayfreeze_pid=$!
+    read -r < "$pipe"
     "${cmd[@]}" "$filepath"
-    kill $PID 2>/dev/null || true
   fi
+  kill $wayfreeze_pid 2>/dev/null || true
+  rm -f "$pipe"
+  trap - EXIT
 elif [[ ${args[--region]} ]]; then
   geometry=$(slurp -d)
   [[ -z "$geometry" ]] && exit 1
