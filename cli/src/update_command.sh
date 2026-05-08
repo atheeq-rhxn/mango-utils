@@ -1,4 +1,4 @@
-REPO="https://github.com/atheeq-rhxn/msnap"
+REPO="https://github.com/xtheeq/msnap"
 manifest="@MANIFEST_PATH@"
 binary_path="${BASH_SOURCE[0]}"
 

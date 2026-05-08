@@ -63,7 +63,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
 
   meta = {
     description = "Screenshot and screencast utility for mangowm";
-    homepage = "https://github.com/atheeq-rhxn/msnap";
+    homepage = "https://github.com/xtheeq/msnap";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ ];
     platforms = lib.platforms.linux;

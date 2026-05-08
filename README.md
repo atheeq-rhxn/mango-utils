@@ -25,7 +25,7 @@ https://github.com/user-attachments/assets/99f3e8dc-77af-43d6-9601-2bddf4e31675
 ## Installation
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/atheeq-rhxn/msnap/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/xtheeq/msnap/main/install.sh | bash
 ```
 
 The script will prompt for **user** or **system-wide** installation.
@@ -40,7 +40,7 @@ Add msnap's input and overlay in your `flake.nix`:
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     msnap = {
-      url = "github:atheeq-rhxn/msnap";
+      url = "github:xtheeq/msnap";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -65,7 +65,7 @@ environment.systemPackages = [ pkgs.msnap ];
 Or for a standalone try without installing:
 
 ```sh
-nix run github:atheeq-rhxn/msnap -- shot
+nix run github:xtheeq/msnap -- shot
 ```
 
 ---

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-REPO="https://github.com/atheeq-rhxn/msnap"
+REPO="https://github.com/xtheeq/msnap"
 TMP_DIR="$(mktemp -d -t msnap-install-XXXXXX)"
 
 BOLD='\033[1m'
@@ -66,7 +66,7 @@ fetch_source() {
     else
         info "Downloading latest release..." >&2
         local version
-        version=$(curl -s https://api.github.com/repos/atheeq-rhxn/msnap/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        version=$(curl -s https://api.github.com/repos/xtheeq/msnap/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
         [[ -z "$version" ]] && version="main"
 
         run_quiet curl -fsSL "${REPO}/archive/refs/tags/${version}.tar.gz" -o "${TMP_DIR}/src.tar.gz" || \
