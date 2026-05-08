@@ -29,11 +29,8 @@ build_cmd() {
 }
 
 if [[ -f "$recording_pid_file" ]]; then
-  pid=$(<"$recording_pid_file")
-  if kill -0 "$pid" 2>/dev/null; then
-    kill -2 "$pid"
-    wait "$pid" 2>/dev/null || true
-  fi
+  pkill -SIGINT -f "^gpu-screen-recorder"
+  while pgrep -f "^gpu-screen-recorder" > /dev/null; do sleep 0.1; done
   rm -f "$recording_pid_file" "/tmp/msnap-cast.starttime"
   if [[ -f "$recording_filepath_file" ]]; then
     filepath=$(<"$recording_filepath_file")
