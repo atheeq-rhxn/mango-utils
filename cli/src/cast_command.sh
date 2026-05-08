@@ -1,5 +1,14 @@
 output_dir="${args[--output]:-${ini[cast_output_dir]:-${XDG_VIDEOS_DIR:-$HOME/Videos}/Screencasts}}"
 filename_pattern="${args[--filename]:-${ini[cast_filename_pattern]:-%Y%m%d%H%M%S.mp4}}"
+quality="${args[--quality]:-${ini[cast_quality]:-}}"
+video_codec="${args[--codec]:-${ini[cast_codec]:-}}"
+frame_rate="${args[--framerate]:-${ini[cast_framerate]:-}}"
+audio_codec="${args[--audio-codec]:-${ini[cast_audio_codec]:-}}"
+color_range="${args[--color-range]:-${ini[cast_color_range]:-}}"
+no_cursor="${args[--no-cursor]:-${ini[cast_cursor]:-}}"
+resolution="${args[--resolution]:-${ini[cast_resolution]:-}}"
+container="${args[--container]:-${ini[cast_container]:-}}"
+tune="${args[--tune]:-${ini[cast_tune]:-}}"
 recording_pid_file="/tmp/msnap-cast.pid"
 recording_filepath_file="/tmp/msnap-cast.filepath"
 
@@ -25,6 +34,15 @@ build_cmd() {
   elif [[ ${args[--mic]:-} ]]; then
     cmd+=(-a "${args[--mic-device]:-default_input}")
   fi
+  [[ -n "$quality" ]]     && cmd+=(-q "$quality")
+  [[ -n "$video_codec" ]] && cmd+=(-k "$video_codec")
+  [[ -n "$frame_rate" ]]  && cmd+=(-f "$frame_rate")
+  [[ -n "$color_range" ]] && cmd+=(-cr "$color_range")
+  [[ -n "$resolution" ]]  && cmd+=(-s "$resolution")
+  [[ -n "$container" ]]   && cmd+=(-c "$container")
+  [[ -n "$tune" ]]        && cmd+=(-tune "$tune")
+  [[ -n "$no_cursor" ]]   && cmd+=(-cursor no)
+  [[ -n "$audio_codec" ]] && cmd+=(-ac "$audio_codec")
   cmd+=(-o "$filepath")
 }
 

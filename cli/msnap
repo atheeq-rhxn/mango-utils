@@ -187,6 +187,51 @@ msnap_cast_usage() {
     printf "    Microphone device (default - default_input)\n"
     echo
 
+    # :flag.usage
+    printf "  %s\n" "--quality, -q LEVEL"
+    printf "    Video quality (medium, high, very_high, ultra)\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "--codec, -k CODEC"
+    printf "    Video codec (h264, hevc, av1, vp8, vp9)\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "--framerate, -F FPS"
+    printf "    Target frame rate\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "--audio-codec, -C CODEC"
+    printf "    Audio codec (opus, aac)\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "--color-range, -R RANGE"
+    printf "    Color range (limited, full)\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "--no-cursor"
+    printf "    Hide cursor in recording\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "--resolution, -s WXH"
+    printf "    Output resolution cap (e.g. 1920x1080)\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "--container, -c FORMAT"
+    printf "    Container format (mp4, mkv, webm)\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "--tune, -T TUNE"
+    printf "    Encoding tune (performance, quality)\n"
+    echo
+
     # :command.usage_fixed_flags
     printf "  %s\n" "--help, -h"
     printf "    Show this help\n"
@@ -603,6 +648,15 @@ msnap_cast_command() {
   # src/cast_command.sh
   output_dir="${args[--output]:-${ini[cast_output_dir]:-${XDG_VIDEOS_DIR:-$HOME/Videos}/Screencasts}}"
   filename_pattern="${args[--filename]:-${ini[cast_filename_pattern]:-%Y%m%d%H%M%S.mp4}}"
+  quality="${args[--quality]:-${ini[cast_quality]:-}}"
+  video_codec="${args[--codec]:-${ini[cast_codec]:-}}"
+  frame_rate="${args[--framerate]:-${ini[cast_framerate]:-}}"
+  audio_codec="${args[--audio-codec]:-${ini[cast_audio_codec]:-}}"
+  color_range="${args[--color-range]:-${ini[cast_color_range]:-}}"
+  no_cursor="${args[--no-cursor]:-${ini[cast_cursor]:-}}"
+  resolution="${args[--resolution]:-${ini[cast_resolution]:-}}"
+  container="${args[--container]:-${ini[cast_container]:-}}"
+  tune="${args[--tune]:-${ini[cast_tune]:-}}"
   recording_pid_file="/tmp/msnap-cast.pid"
   recording_filepath_file="/tmp/msnap-cast.filepath"
 
@@ -628,6 +682,15 @@ msnap_cast_command() {
     elif [[ ${args[--mic]:-} ]]; then
       cmd+=(-a "${args[--mic-device]:-default_input}")
     fi
+    [[ -n "$quality" ]]     && cmd+=(-q "$quality")
+    [[ -n "$video_codec" ]] && cmd+=(-k "$video_codec")
+    [[ -n "$frame_rate" ]]  && cmd+=(-f "$frame_rate")
+    [[ -n "$color_range" ]] && cmd+=(-cr "$color_range")
+    [[ -n "$resolution" ]]  && cmd+=(-s "$resolution")
+    [[ -n "$container" ]]   && cmd+=(-c "$container")
+    [[ -n "$tune" ]]        && cmd+=(-tune "$tune")
+    [[ -n "$no_cursor" ]]   && cmd+=(-cursor no)
+    [[ -n "$audio_codec" ]] && cmd+=(-ac "$audio_codec")
     cmd+=(-o "$filepath")
   }
 
@@ -1368,6 +1431,126 @@ msnap_cast_parse_requirements() {
           shift
         else
           printf "%s\n" "--mic-device requires an argument: --mic-device, -M DEVICE" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --quality | -q)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--quality']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--quality requires an argument: --quality, -q LEVEL" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --codec | -k)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--codec']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--codec requires an argument: --codec, -k CODEC" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --framerate | -F)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--framerate']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--framerate requires an argument: --framerate, -F FPS" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --audio-codec | -C)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--audio-codec']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--audio-codec requires an argument: --audio-codec, -C CODEC" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --color-range | -R)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--color-range']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--color-range requires an argument: --color-range, -R RANGE" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --no-cursor)
+
+        # :flag.case_no_arg
+        args['--no-cursor']=1
+        shift
+        ;;
+
+      # :flag.case
+      --resolution | -s)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--resolution']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--resolution requires an argument: --resolution, -s WXH" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --container | -c)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--container']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--container requires an argument: --container, -c FORMAT" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --tune | -T)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--tune']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--tune requires an argument: --tune, -T TUNE" >&2
           exit 1
         fi
         ;;

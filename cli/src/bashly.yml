@@ -93,6 +93,40 @@ commands:
     short: -M
     arg: device
     help: Microphone device (default - default_input)
+  - long: --quality
+    short: -q
+    arg: level
+    help: Video quality (medium, high, very_high, ultra)
+  - long: --codec
+    short: -k
+    arg: codec
+    help: Video codec (h264, hevc, av1, vp8, vp9)
+  - long: --framerate
+    short: -F
+    arg: fps
+    help: Target frame rate
+  - long: --audio-codec
+    short: -C
+    arg: codec
+    help: Audio codec (opus, aac)
+  - long: --color-range
+    short: -R
+    arg: range
+    help: Color range (limited, full)
+  - long: --no-cursor
+    help: Hide cursor in recording
+  - long: --resolution
+    short: -s
+    arg: WxH
+    help: Output resolution cap (e.g. 1920x1080)
+  - long: --container
+    short: -c
+    arg: format
+    help: Container format (mp4, mkv, webm)
+  - long: --tune
+    short: -T
+    arg: tune
+    help: Encoding tune (performance, quality)
 
 - name: gui
   help: Launch the graphical interface
