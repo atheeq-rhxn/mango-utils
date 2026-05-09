@@ -36,7 +36,7 @@ Item {
     ]
 
     readonly property int handleSize: 12
-    readonly property int handleHitArea: 6
+    readonly property int handleHitArea: 8
     readonly property int minSelectionSize: 8
 
     // Background Dimming Handles (Calculated strictly to allow negative/cross-monitor clipping)
@@ -44,28 +44,24 @@ Item {
         anchors.fill: parent
         visible: selectorRoot.visible
 
-        // Top
-        Rectangle {
+        Rectangle { // Top
             x: 0; y: 0; width: parent.width
             height: hasSelection ? Math.max(0, selectorRoot.localSelY) : parent.height
             color: selectorRoot.overlayMask
         }
-        // Bottom
-        Rectangle {
+        Rectangle { // Bottom
             x: 0; y: hasSelection ? Math.max(0, selectorRoot.localSelY + selectorRoot.localSelH) : parent.height
             width: parent.width
             height: hasSelection ? Math.max(0, parent.height - y) : 0
             color: selectorRoot.overlayMask
         }
-        // Left
-        Rectangle {
+        Rectangle { // Left
             x: 0; y: Math.max(0, selectorRoot.localSelY)
             width: hasSelection ? Math.max(0, selectorRoot.localSelX) : 0
             height: hasSelection ? Math.max(0, Math.min(parent.height, selectorRoot.localSelY + selectorRoot.localSelH) - y) : 0
             color: selectorRoot.overlayMask
         }
-        // Right
-        Rectangle {
+        Rectangle { // Right
             x: hasSelection ? Math.max(0, selectorRoot.localSelX + selectorRoot.localSelW) : parent.width
             y: Math.max(0, selectorRoot.localSelY)
             width: hasSelection ? Math.max(0, parent.width - x) : 0
@@ -74,7 +70,7 @@ Item {
         }
     }
 
-    // The Stroke Box (Qt handles partial off-screen rendering natively)
+    // The Stroke Box
     Rectangle {
         x: selectorRoot.localSelX
         y: selectorRoot.localSelY
@@ -156,7 +152,7 @@ Item {
 
                 onPositionChanged: mouse => {
                     if (!globalState.isResizing || globalState.activeHandle !== index) return
-                    // mapToItem prevents the handle from creating a movement feedback loop
+             
                     const pt = mapToItem(selectorRoot, mouse.x, mouse.y)
                     const ptGlobalX = (pt.x * selectorRoot.scaleFactor) + selectorRoot.screenOffsetX
                     const ptGlobalY = (pt.y * selectorRoot.scaleFactor) + selectorRoot.screenOffsetY
@@ -196,7 +192,6 @@ Item {
         cursorShape: {
             if (globalState.isSelecting) return Qt.CrossCursor
             if (globalState.isMoving) return Qt.ClosedHandCursor
-            
             if (selectorRoot.hasSelection && 
                 mouseX >= selectorRoot.localSelX && 
                 mouseX <= selectorRoot.localSelX + selectorRoot.localSelW && 
