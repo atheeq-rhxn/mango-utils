@@ -1,24 +1,33 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Window
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 
-PanelWindow {
-    id: root
+Scope {
+    id: globalState
 
-    screen: Quickshell.screens[0]
-    anchors.top: true
-    anchors.left: true
-    anchors.right: true
-    anchors.bottom: true
-    visible: true
-    color: "transparent"
-
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
-    WlrLayershell.namespace: "msnap"
-    WlrLayershell.exclusionMode: ExclusionMode.Ignore
+    // ---- GLOBAL SELECTION STATE ----
+    property real globalSelX: 0
+    property real globalSelY: 0
+    property real globalSelW: 0
+    property real globalSelH: 0
+    property real startX: 0
+    property real startY: 0
+    
+    property bool isSelecting: false
+    property bool isMoving: false
+    property bool isResizing: false
+    property int activeHandle: -1
+    property real moveStartSelX: 0
+    property real moveStartSelY: 0
+    property real moveStartMouseX: 0
+    property real moveStartMouseY: 0
+    property real resizeAnchorX: 0
+    property real resizeAnchorY: 0
+    property bool isActivelyEditing: false
+    // --------------------------------
 
     property bool isLoaded: false
     property bool isShot: true
@@ -35,6 +44,8 @@ PanelWindow {
     property bool showCastAlert: false
     property int castSeconds: 0
     property int castStartEpoch: 0
+    
+    property bool windowsVisible: true
 
     readonly property color accent: isShot ? Config.ssAccent : Config.recAccent
     readonly property color pillBg: Qt.rgba(Config.surfaceColor.r, Config.surfaceColor.g, Config.surfaceColor.b, 0.88)
@@ -45,63 +56,18 @@ PanelWindow {
 
     onCaptureModeChanged: {
         if (!isLoaded) return
-        if (captureMode === "region") {
-            regionSelector.activate()
-        } else {
-            regionSelector.visible = false
-            // Auto-uncollapse if the user switches to Window or Screen mode
-            root.isCollapsed = false
+        if (captureMode !== "region") {
+            isCollapsed = false
+            globalSelW = 0
+            globalSelH = 0
         }
-    }
-
-    component IconButton: Rectangle {
-        property string iconName: ""
-        property bool isActive: false
-        property bool isEnabled: true
-        property bool isPrimary: false
-        property color activeAccent: root.accent
-        signal clicked
-
-        width: isPrimary ? 44 : 36
-        height: isPrimary ? 44 : 36
-        radius: height / 2
-        opacity: isEnabled ? 1.0 : 0.3
-        color: isPrimary ? activeAccent : (isActive ? Qt.rgba(activeAccent.r, activeAccent.g, activeAccent.b, 0.15) : "transparent")
-        border.width: isActive && !isPrimary ? 1 : 0
-        border.color: activeAccent
-
-        Icon {
-            anchors.centerIn: parent
-            name: parent.iconName
-            color: parent.isPrimary ? Config.bgColor : (parent.isActive ? parent.activeAccent : Config.textMuted)
-            size: parent.isPrimary ? 22 : 20
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            enabled: parent.isEnabled
-            cursorShape: parent.isEnabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-            onClicked: parent.clicked()
-        }
-    }
-
-    component VDivider: Rectangle {
-        width: 1
-        height: 24
-        color: Config.borderColor
-        Layout.alignment: Qt.AlignVCenter
-        Layout.leftMargin: 2
-        Layout.rightMargin: 2
     }
 
     Timer { 
         interval: 50
         running: true
         onTriggered: {
-            root.isLoaded = true
-            if (root.captureMode === "region") {
-                regionSelector.activate()
-            }
+            globalState.isLoaded = true
         }
     }
 
@@ -112,22 +78,22 @@ PanelWindow {
         printErrors: false
         onLoaded: {
             const t = parseInt(text().trim(), 10)
-            if (!isNaN(t)) root.castStartEpoch = t
+            if (!isNaN(t)) globalState.castStartEpoch = t
         }
     }
 
     Timer {
         interval: 1000
         repeat: true
-        running: root.isCasting
-        onTriggered: root.castSeconds = root.castStartEpoch > 0
-            ? Math.floor(Date.now() / 1000) - root.castStartEpoch
-            : root.castSeconds + 1
+        running: globalState.isCasting
+        onTriggered: globalState.castSeconds = globalState.castStartEpoch > 0
+            ? Math.floor(Date.now() / 1000) - globalState.castStartEpoch
+            : globalState.castSeconds + 1
         onRunningChanged: {
             if (running) { startTimeFile.reload() }
             else { 
-                root.castSeconds = 0
-                root.castStartEpoch = 0 
+                globalState.castSeconds = 0
+                globalState.castStartEpoch = 0 
             }
         }
     }
@@ -137,12 +103,12 @@ PanelWindow {
         interval: 400
         repeat: false
         onTriggered: {
-            isTransitioningToCast = false
-            const a = buildArgs("cast", false)
+            globalState.isTransitioningToCast = false
+            const a = globalState.buildArgs("cast", false)
             a.push("--toggle")
             Quickshell.execDetached(a)
-            isCasting = true
-            root.visible = false
+            globalState.isCasting = true
+            globalState.windowsVisible = false
         }
     }
 
@@ -151,15 +117,15 @@ PanelWindow {
         watchChanges: true
         printErrors: false
         onLoaded: {
-            root.isCasting = true
-            root.showCastAlert = true
+            globalState.isCasting = true
+            globalState.showCastAlert = true
             startTimeFile.reload()
             castAlertTimer.start()
         }
         onLoadFailed: {
-            if (root.isCasting) {
-                root.isCasting = false
-                if (!root.visible) quitTimer.start()
+            if (globalState.isCasting) {
+                globalState.isCasting = false
+                if (!globalState.windowsVisible) quitTimer.start()
             }
         }
     }
@@ -176,14 +142,13 @@ PanelWindow {
         interval: 2000
         repeat: false
         onTriggered: { 
-            root.showCastAlert = false
-            root.visible = false 
+            globalState.showCastAlert = false
+            globalState.windowsVisible = false 
         }
     }
 
-    function close() { 
-        visible = false
-        regionSelector.visible = false
+    function closeAll() { 
+        windowsVisible = false
         if (!isCasting) Qt.quit() 
     }
 
@@ -195,12 +160,11 @@ PanelWindow {
 
     function buildArgs(sub, forShot) {
         const a = [Config.msnapPath, sub]
-        if (captureMode === "region" && regionSelector.hasSelection) {
-            const sf = regionSelector.scaleFactor || 1.0
-            const rx = Math.round(regionSelector.selX * sf)
-            const ry = Math.round(regionSelector.selY * sf)
-            const rw = Math.round(regionSelector.selW * sf)
-            const rh = Math.round(regionSelector.selH * sf)
+        if (captureMode === "region" && globalSelW > 4 && globalSelH > 4) {
+            const rx = Math.round(globalSelX)
+            const ry = Math.round(globalSelY)
+            const rw = Math.round(globalSelW)
+            const rh = Math.round(globalSelH)
             a.push("-g", `${rx},${ry} ${rw}x${rh}`)
         } else if (captureMode === "window") {
             a.push("-w")
@@ -216,21 +180,20 @@ PanelWindow {
     }
 
     function executeAction() {
-        if (captureMode === "region" && !regionSelector.hasSelection) {
-            return 
+        if (captureMode === "region" && (globalSelW <= 4 || globalSelH <= 4)) {
+            return
         }
         isShot ? doShot() : doCast()
     }
 
     function doShot() {
         Quickshell.execDetached(buildArgs("shot", true))
-        close()
+        closeAll()
     }
 
     function doCast() {
         if (isCasting) return
         isTransitioningToCast = true
-        regionSelector.visible = false
         castTransitionTimer.start()
     }
 
@@ -238,402 +201,451 @@ PanelWindow {
         if (!isCasting) return
         Quickshell.execDetached([Config.msnapPath, "cast", "--toggle"])
         isCasting = false
-        if (!root.visible) quitTimer.start()
+        if (!windowsVisible) quitTimer.start()
     }
 
-    PanelWindow {
-        id: recordingIndicator
-        screen: Quickshell.screens[0]
-        anchors.bottom: true
-        anchors.right: true
-        visible: root.isCasting && !root.isTransitioningToCast
-        color: "transparent"
-        implicitWidth: 240
-        implicitHeight: 120
+    Variants {
+        model: Quickshell.screens
+        
+        PanelWindow {
+            id: windowRoot
+            required property var modelData
+            screen: modelData
 
-        WlrLayershell.layer:         WlrLayer.Top
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
-        WlrLayershell.namespace:     "msnap"
-        WlrLayershell.exclusionMode: ExclusionMode.Ignore
+            anchors.top: true
+            anchors.left: true
+            anchors.right: true
+            anchors.bottom: true
+            visible: globalState.windowsVisible
+            color: "transparent"
 
-        Item {
-            anchors.fill: parent
-            anchors.bottomMargin: 40
-            anchors.rightMargin: 12
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+            WlrLayershell.namespace: "msnap"
+            WlrLayershell.exclusionMode: ExclusionMode.Ignore
 
-            Rectangle {
-                id: pill
-                anchors.bottom: parent.bottom
-                anchors.right: parent.right
-                width:  pillHover.containsMouse ? 150 : 6
-                height: 44
-                radius: pillHover.containsMouse ? 22 : 3
-                color:        root.pillBg
-                border.width: 1
-                border.color: Config.recAccent
-                clip: true
+            component IconButton: Rectangle {
+                property string iconName: ""
+                property bool isActive: false
+                property bool isEnabled: true
+                property bool isPrimary: false
+                property color activeAccent: globalState.accent
+                signal clicked
 
-                Behavior on width  { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
-                Behavior on radius { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                width: isPrimary ? 44 : 36
+                height: isPrimary ? 44 : 36
+                radius: height / 2
+                opacity: isEnabled ? 1.0 : 0.3
+                color: isPrimary ? activeAccent : (isActive ? Qt.rgba(activeAccent.r, activeAccent.g, activeAccent.b, 0.15) : "transparent")
+                border.width: isActive && !isPrimary ? 1 : 0
+                border.color: activeAccent
 
-                RowLayout {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    width: 150
-                    spacing: 12
-                    opacity: pillHover.containsMouse ? 1.0 : 0.0
-                    Behavior on opacity { NumberAnimation { duration: 200 } }
-
-                    Rectangle {
-                        width: 10; height: 10; radius: 5; color: Config.recAccent; Layout.leftMargin: 16
-                        SequentialAnimation on opacity {
-                            running: pillHover.containsMouse && root.isCasting
-                            loops: Animation.Infinite
-                            NumberAnimation { to: 0.3; duration: 800; easing.type: Easing.InOutSine }
-                            NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutSine }
-                        }
-                    }
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: root.formatTime(root.castSeconds)
-                        color: Config.textColor
-                        font.pixelSize: 13
-                        font.weight: Font.DemiBold
-                        verticalAlignment: Text.AlignVCenter
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-
-                    Rectangle { width: 1; height: 16; color: Config.borderColor }
-
-                    Rectangle {
-                        width: 32; height: 32; radius: 16; color: "transparent"; Layout.rightMargin: 8
-                        Icon { anchors.centerIn: parent; name: "player-stop"; color: Config.recAccent; size: 16 }
-                    }
+                Icon {
+                    anchors.centerIn: parent
+                    name: parent.iconName
+                    color: parent.isPrimary ? Config.bgColor : (parent.isActive ? parent.activeAccent : Config.textMuted)
+                    size: parent.isPrimary ? 22 : 20
                 }
 
                 MouseArea {
-                    id: pillHover
                     anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.stopCast()
+                    enabled: parent.isEnabled
+                    cursorShape: parent.isEnabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: parent.clicked()
                 }
             }
-        }
-    }
 
-    Item {
-        anchors.fill: parent
-        focus: true
-        Component.onCompleted: forceActiveFocus()
-        onVisibleChanged: if (visible) forceActiveFocus()
-
-        function cycleTarget(dir) {
-            const modes = root.isShot ? ["region", "window", "screen"] : ["region", "screen"]
-            const i = modes.indexOf(root.captureMode)
-            root.captureMode = modes[((i < 0 ? 0 : i) + dir + modes.length) % modes.length]
-        }
-
-        Keys.onTabPressed:     root.isShot = !root.isShot
-        Keys.onBacktabPressed: root.isShot = !root.isShot
-        Keys.onReturnPressed:  root.executeAction()
-        Keys.onEnterPressed:   root.executeAction()
-        Keys.onSpacePressed:   root.executeAction()
-        Keys.onEscapePressed: {
-            if (root.captureMode === "region" && regionSelector.hasSelection) {
-                regionSelector.clear()
-            } else {
-                root.close()
+            component VDivider: Rectangle {
+                width: 1
+                height: 24
+                color: Config.borderColor
+                Layout.alignment: Qt.AlignVCenter
+                Layout.leftMargin: 2
+                Layout.rightMargin: 2
             }
-        }
 
-        readonly property var keyHandlers: ({
-            [Qt.Key_H]:     () => cycleTarget(-1),
-            [Qt.Key_J]:     () => { root.isShot = !root.isShot },
-            [Qt.Key_K]:     () => { root.isShot = !root.isShot },
-            [Qt.Key_L]:     () => cycleTarget(1),
-            [Qt.Key_Left]:  () => cycleTarget(-1),
-            [Qt.Key_Right]: () => cycleTarget(1),
-            [Qt.Key_S]:     () => { root.isShot = true },
-            [Qt.Key_V]:     () => { root.isShot = false },
-            [Qt.Key_R]:     () => { root.captureMode = "region" },
-            [Qt.Key_W]:     () => { if (root.isShot) root.captureMode = "window" },
-            [Qt.Key_F]:     () => { root.captureMode = "screen" },
-            [Qt.Key_P]:     () => { if (root.isShot)  root.optPointer  = !root.optPointer },
-            [Qt.Key_E]:     () => { if (root.isShot)  root.optAnnotate = !root.optAnnotate },
-            [Qt.Key_M]:     () => { if (!root.isShot) root.optMic      = !root.optMic },
-            [Qt.Key_A]:     () => { if (!root.isShot) root.optAudio    = !root.optAudio },
-        })
+            PanelWindow {
+                id: recordingIndicator
+                screen: windowRoot.screen
+                anchors.bottom: true
+                anchors.right: true
+                visible: globalState.isCasting && !globalState.isTransitioningToCast && windowRoot.visible
+                color: "transparent"
+                implicitWidth: 240
+                implicitHeight: 120
 
-        Keys.onPressed: event => {
-            const fn = keyHandlers[event.key]
-            if (fn) { 
-                fn()
-                event.accepted = true 
-            }
-        }
+                WlrLayershell.layer:         WlrLayer.Top
+                WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+                WlrLayershell.namespace:     "msnap"
+                WlrLayershell.exclusionMode: ExclusionMode.Ignore
 
-        onActiveFocusChanged: {
-            if (!activeFocus && visible && !root.isCasting)
-                root.close()
-        }
+                Item {
+                    anchors.fill: parent
+                    anchors.bottomMargin: 40
+                    anchors.rightMargin: 12
 
-        // ── 1. Global Background Click (Lowest Layer, z: 0) ──
-        MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-            enabled: !regionSelector.visible
-            onClicked: root.close()
-            z: 0 
-        }
+                    Rectangle {
+                        id: pill
+                        anchors.bottom: parent.bottom
+                        anchors.right: parent.right
+                        width:  pillHover.containsMouse ? 150 : 6
+                        height: 44
+                        radius: pillHover.containsMouse ? 22 : 3
+                        color:        globalState.pillBg
+                        border.width: 1
+                        border.color: Config.recAccent
+                        clip: true
 
-        // ── 2. The Region Selector (Middle Layer, z: 1) ──────
-        RegionSelector {
-            id: regionSelector
-            anchors.fill: parent
-            z: 1 
-            scaleFactor: root.screen ? root.screen.devicePixelRatio : 1.0
-            onCancelled: root.close()
-            onIsActivelyEditingChanged: {
-                if (!isActivelyEditing && hasSelection) {
-                    root.isCollapsed = false
-                }
-            }
-        }
+                        Behavior on width  { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                        Behavior on radius { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
 
-        // ── 3. Cast Alert Toast (Top Layer, z: 10) ───────────
-        Rectangle {
-            visible: root.showCastAlert
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 40
-            width: toastRow.implicitWidth + 24
-            height: 44
-            radius: 22
-            color: root.pillBg
-            border.color: Config.recAccent
-            border.width: 1
-            opacity: root.showCastAlert ? 1.0 : 0.0
-            z: 10
-            Behavior on opacity { NumberAnimation { duration: 200 } }
+                        RowLayout {
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: 150
+                            spacing: 12
+                            opacity: pillHover.containsMouse ? 1.0 : 0.0
+                            Behavior on opacity { NumberAnimation { duration: 200 } }
 
-            RowLayout {
-                id: toastRow
-                anchors.centerIn: parent
-                spacing: 8
+                            Rectangle {
+                                width: 10; height: 10; radius: 5; color: Config.recAccent; Layout.leftMargin: 16
+                                SequentialAnimation on opacity {
+                                    running: pillHover.containsMouse && globalState.isCasting
+                                    loops: Animation.Infinite
+                                    NumberAnimation { to: 0.3; duration: 800; easing.type: Easing.InOutSine }
+                                    NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutSine }
+                                }
+                            }
 
-                Rectangle {
-                    width: 8
-                    height: 8
-                    radius: 4
-                    color: Config.recAccent
-                    SequentialAnimation on opacity {
-                        running: root.showCastAlert
-                        loops: Animation.Infinite
-                        NumberAnimation { to: 0.3; duration: 700; easing.type: Easing.InOutSine }
-                        NumberAnimation { to: 1.0; duration: 700; easing.type: Easing.InOutSine }
+                            Text {
+                                Layout.fillWidth: true
+                                text: globalState.formatTime(globalState.castSeconds)
+                                color: Config.textColor
+                                font.pixelSize: 13
+                                font.weight: Font.DemiBold
+                                verticalAlignment: Text.AlignVCenter
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+
+                            Rectangle { width: 1; height: 16; color: Config.borderColor }
+
+                            Rectangle {
+                                width: 32; height: 32; radius: 16; color: "transparent"; Layout.rightMargin: 8
+                                Icon { anchors.centerIn: parent; name: "player-stop"; color: Config.recAccent; size: 16 }
+                            }
+                        }
+
+                        MouseArea {
+                            id: pillHover
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: globalState.stopCast()
+                        }
                     }
                 }
-
-                Text {
-                    text: "Recording in progress"
-                    color: Config.textColor
-                    font.pixelSize: 13
-                    font.weight: Font.Medium
-                }
-            }
-        }
-
-        // ── 4. Floating Pull Tab (The Up/Down Toggle) ────────
-        Rectangle {
-            id: pullTab
-            // Only show pull tab during Region Mode!
-            visible: !root.showCastAlert && !root.isTransitioningToCast && root.captureMode === "region"
-            z: 11 
-            width: 48
-            height: 24
-            radius: 12
-            color: root.pillBg
-            border.color: Config.borderColor
-            border.width: 1
-
-            x: (parent.width - width) / 2
-            
-            // Explicitly sync Y coordinates with identical math to prevent lag
-            y: regionSelector.isActivelyEditing 
-                ? parent.height + 10 
-                : (root.isCollapsed 
-                    ? parent.height - 24 
-                    : parent.height - toolbar.idleH - 40 - height + 12)
-
-            // Identical Behavior curve as the toolbar
-            Behavior on y { enabled: root.isLoaded; NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
-
-            Icon {
-                anchors.centerIn: parent
-                anchors.verticalCenterOffset: root.isCollapsed ? 0 : -2
-                name: root.isCollapsed ? "chevron-up" : "chevron-down"
-                size: 16
-                color: Config.textMuted
             }
 
-            MouseArea {
+            Item {
                 anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.isCollapsed = !root.isCollapsed
-            }
-        }
+                focus: true
+                Component.onCompleted: forceActiveFocus()
+                onVisibleChanged: if (visible) forceActiveFocus()
 
-        // ── 5. Floating Toolbar (Top Layer, z: 10) ───────────
-        Rectangle {
-            id: toolbar
-            visible: !root.showCastAlert
-            clip: true
-            z: 10 
-
-            readonly property real idleW: mainRow.implicitWidth + 32
-            readonly property real idleH: 56
-
-            // Dynamic X and Width calculated directly without Behaviors to prevent layout fighting
-            x: root.isTransitioningToCast ? parent.width - 6 - 12 : (parent.width - width) / 2
-            width: root.isTransitioningToCast ? 6 : idleW
-            height: root.isTransitioningToCast ? 44 : idleH
-            radius: root.isTransitioningToCast ? 3 : idleH / 2
-
-            // Slide offscreen when dragging region OR when user clicks the pull tab
-            y: regionSelector.isActivelyEditing 
-                ? parent.height + 10 
-                : (root.isCollapsed && root.captureMode === "region" 
-                    ? parent.height + 10 
-                    : parent.height - idleH - 40)
-            
-            color: root.pillBg
-            border.color: root.isTransitioningToCast ? Config.recAccent : Config.borderColor
-            border.width: 1
-            opacity: root.isTransitioningToCast ? 0.0 : (regionSelector.isActivelyEditing ? 0.0 : 1.0)
-
-            // ALWAYS animate Y and Opacity for smooth hide/show - matches Pull Tab perfectly
-            Behavior on y       { enabled: root.isLoaded; NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
-            Behavior on opacity { enabled: root.isLoaded; NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
-
-            // ONLY animate Width/X/Height during Cast transition. Region expansion handles its own animation cleanly.
-            Behavior on width   { enabled: root.isTransitioningToCast; NumberAnimation { duration: 400; easing.type: Easing.InOutCubic } }
-            Behavior on height  { enabled: root.isTransitioningToCast; NumberAnimation { duration: 400; easing.type: Easing.InOutCubic } }
-            Behavior on x       { enabled: root.isTransitioningToCast; NumberAnimation { duration: 400; easing.type: Easing.InOutCubic } }
-            Behavior on radius  { enabled: root.isTransitioningToCast; NumberAnimation { duration: 400; easing.type: Easing.InOutCubic } }
-
-            MouseArea { anchors.fill: parent }
-
-            RowLayout {
-                id: mainRow
-                anchors.centerIn: parent
-                spacing: 8
-
-                IconButton { 
-                    iconName: "camera"
-                    isActive: root.isShot
-                    activeAccent: Config.ssAccent
-                    onClicked: root.isShot = true 
-                }
-                IconButton { 
-                    iconName: "video"
-                    isActive: !root.isShot
-                    activeAccent: Config.recAccent
-                    onClicked: root.isShot = false 
+                function cycleTarget(dir) {
+                    const modes = globalState.isShot ? ["region", "window", "screen"] : ["region", "screen"]
+                    const i = modes.indexOf(globalState.captureMode)
+                    globalState.captureMode = modes[((i < 0 ? 0 : i) + dir + modes.length) % modes.length]
                 }
 
-                VDivider {}
-
-                Rectangle {
-                    id: regionBtn
-                    height: 36
-                    Layout.preferredWidth: (root.captureMode === "region" && regionSelector.hasSelection) ? regionBtnRow.implicitWidth + 16 : 36
-                    radius: 18
-                    color: root.captureMode === "region" ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15) : "transparent"
-                    border.width: root.captureMode === "region" ? 1 : 0
-                    border.color: root.accent
-
-                    // This is the ONLY width behavior needed. It smoothly pushes the RowLayout.
-                    Behavior on Layout.preferredWidth { 
-                        enabled: root.isLoaded
-                        NumberAnimation { duration: 350; easing.type: Easing.OutCubic } 
+                Keys.onTabPressed:     globalState.isShot = !globalState.isShot
+                Keys.onBacktabPressed: globalState.isShot = !globalState.isShot
+                Keys.onReturnPressed:  globalState.executeAction()
+                Keys.onEnterPressed:   globalState.executeAction()
+                Keys.onSpacePressed:   globalState.executeAction()
+                Keys.onEscapePressed: {
+                    if (globalState.captureMode === "region" && globalState.globalSelW > 4) {
+                        globalState.globalSelW = 0
+                        globalState.globalSelH = 0
+                        globalState.isActivelyEditing = false
+                    } else {
+                        globalState.closeAll()
                     }
+                }
+
+                readonly property var keyHandlers: ({
+                    [Qt.Key_H]:     () => cycleTarget(-1),
+                    [Qt.Key_J]:     () => { globalState.isShot = !globalState.isShot },
+                    [Qt.Key_K]:     () => { globalState.isShot = !globalState.isShot },
+                    [Qt.Key_L]:     () => cycleTarget(1),
+                    [Qt.Key_Left]:  () => cycleTarget(-1),
+                    [Qt.Key_Right]: () => cycleTarget(1),
+                    [Qt.Key_S]:     () => { globalState.isShot = true },
+                    [Qt.Key_V]:     () => { globalState.isShot = false },
+                    [Qt.Key_R]:     () => { globalState.captureMode = "region" },
+                    [Qt.Key_W]:     () => { if (globalState.isShot) globalState.captureMode = "window" },
+                    [Qt.Key_F]:     () => { globalState.captureMode = "screen" },
+                    [Qt.Key_P]:     () => { if (globalState.isShot)  globalState.optPointer  = !globalState.optPointer },
+                    [Qt.Key_E]:     () => { if (globalState.isShot)  globalState.optAnnotate = !globalState.optAnnotate },
+                    [Qt.Key_M]:     () => { if (!globalState.isShot) globalState.optMic      = !globalState.optMic },
+                    [Qt.Key_A]:     () => { if (!globalState.isShot) globalState.optAudio    = !globalState.optAudio },
+                })
+
+                Keys.onPressed: event => {
+                    const fn = keyHandlers[event.key]
+                    if (fn) { 
+                        fn()
+                        event.accepted = true 
+                    }
+                }
+
+                // ── 1. Global Background Click
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                    enabled: globalState.captureMode !== "region"
+                    onClicked: globalState.closeAll()
+                    z: 0 
+                }
+
+                // ── 2. The Region Selector
+                RegionSelector {
+                    id: regionSelector
+                    anchors.fill: parent
+                    z: 1 
+                    scaleFactor: windowRoot.screen ? windowRoot.screen.devicePixelRatio : 1.0
+                    // CHANGED: Use Quickshell's raw screen object, not Qt's Wayland-blind Screen property
+                    screenOffsetX: windowRoot.screen.x
+                    screenOffsetY: windowRoot.screen.y
+                }
+
+                // ── 3. Cast Alert Toast
+                Rectangle {
+                    visible: globalState.showCastAlert
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 40
+                    width: toastRow.implicitWidth + 24
+                    height: 44
+                    radius: 22
+                    color: globalState.pillBg
+                    border.color: Config.recAccent
+                    border.width: 1
+                    opacity: globalState.showCastAlert ? 1.0 : 0.0
+                    z: 10
+                    Behavior on opacity { NumberAnimation { duration: 200 } }
 
                     RowLayout {
-                        id: regionBtnRow
+                        id: toastRow
                         anchors.centerIn: parent
-                        spacing: 5
+                        spacing: 8
 
-                        Icon {
-                            name: "crop"
-                            size: 20
-                            color: root.captureMode === "region" ? root.accent : Config.textMuted
+                        Rectangle {
+                            width: 8
+                            height: 8
+                            radius: 4
+                            color: Config.recAccent
+                            SequentialAnimation on opacity {
+                                running: globalState.showCastAlert
+                                loops: Animation.Infinite
+                                NumberAnimation { to: 0.3; duration: 700; easing.type: Easing.InOutSine }
+                                NumberAnimation { to: 1.0; duration: 700; easing.type: Easing.InOutSine }
+                            }
                         }
 
                         Text {
-                            visible: root.captureMode === "region" && regionSelector.hasSelection
-                            text: Math.round(regionSelector.selW * (regionSelector.scaleFactor || 1.0)) + " × " + Math.round(regionSelector.selH * (regionSelector.scaleFactor || 1.0))
-                            font.pixelSize: 10
-                            font.weight: Font.DemiBold
-                            color: root.accent
-                            Layout.rightMargin: 2
+                            text: "Recording in progress"
+                            color: Config.textColor
+                            font.pixelSize: 13
+                            font.weight: Font.Medium
                         }
+                    }
+                }
 
-                        Icon {
-                            visible: root.captureMode === "region" && regionSelector.hasSelection
-                            name: "restore"
-                            size: 12
-                            color: root.accent
-                            opacity: 0.7
-                            Layout.rightMargin: 2
-                        }
+                // ── 4. Floating Pull Tab ────────
+                Rectangle {
+                    id: pullTab
+                    visible: !globalState.showCastAlert && !globalState.isTransitioningToCast && globalState.captureMode === "region"
+                    z: 11 
+                    width: 48
+                    height: 24
+                    radius: 12
+                    color: globalState.pillBg
+                    border.color: Config.borderColor
+                    border.width: 1
+
+                    x: (parent.width - width) / 2
+                    
+                    y: globalState.isActivelyEditing 
+                        ? parent.height + 10 
+                        : (globalState.isCollapsed 
+                            ? parent.height - 24 
+                            : parent.height - toolbar.idleH - 40 - height + 12)
+
+                    Behavior on y { enabled: globalState.isLoaded; NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
+
+                    Icon {
+                        anchors.centerIn: parent
+                        anchors.verticalCenterOffset: globalState.isCollapsed ? 0 : -2
+                        name: globalState.isCollapsed ? "chevron-up" : "chevron-down"
+                        size: 16
+                        color: Config.textMuted
                     }
 
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            root.captureMode = "region"
-                            if (regionSelector.hasSelection) {
-                                regionSelector.clear()
-                            }
-                        }
+                        onClicked: globalState.isCollapsed = !globalState.isCollapsed
                     }
                 }
 
-                IconButton { 
-                    iconName: "app-window"
-                    isActive: root.captureMode === "window"
-                    isEnabled: root.isShot
-                    onClicked: root.captureMode = "window" 
-                }
-                IconButton { 
-                    iconName: "device-desktop"
-                    isActive: root.captureMode === "screen"
-                    onClicked: root.captureMode = "screen" 
-                }
+                // ── 5. Floating Toolbar ───────────
+                Rectangle {
+                    id: toolbar
+                    visible: !globalState.showCastAlert
+                    clip: true
+                    z: 10 
 
-                VDivider {}
+                    readonly property real idleW: mainRow.implicitWidth + 32
+                    readonly property real idleH: 56
 
-                IconButton {
-                    iconName: root.isShot ? (root.optPointer ? "pointer" : "pointer-off") : (root.optMic ? "microphone" : "microphone-off")
-                    isActive: root.isShot ? root.optPointer : root.optMic
-                    onClicked: root.isShot ? (root.optPointer = !root.optPointer) : (root.optMic = !root.optMic)
-                }
-                IconButton {
-                    iconName: root.isShot ? (root.optAnnotate ? "pencil" : "pencil-off") : (root.optAudio ? "volume" : "volume-3")
-                    isActive: root.isShot ? root.optAnnotate : root.optAudio
-                    onClicked: root.isShot ? (root.optAnnotate = !root.optAnnotate) : (root.optAudio = !root.optAudio)
-                }
+                    x: globalState.isTransitioningToCast ? parent.width - 6 - 12 : (parent.width - width) / 2
+                    width: globalState.isTransitioningToCast ? 6 : idleW
+                    height: globalState.isTransitioningToCast ? 44 : idleH
+                    radius: globalState.isTransitioningToCast ? 3 : idleH / 2
 
-                VDivider {}
+                    y: globalState.isActivelyEditing 
+                        ? parent.height + 10 
+                        : (globalState.isCollapsed && globalState.captureMode === "region" 
+                            ? parent.height + 10 
+                            : parent.height - idleH - 40)
+                    
+                    color: globalState.pillBg
+                    border.color: globalState.isTransitioningToCast ? Config.recAccent : Config.borderColor
+                    border.width: 1
+                    opacity: globalState.isTransitioningToCast ? 0.0 : (globalState.isActivelyEditing ? 0.0 : 1.0)
 
-                IconButton {
-                    isPrimary: true
-                    iconName: root.captureMode === "region" && !regionSelector.hasSelection ? "crop" : root.isShot ? "camera-up" : "player-record"
-                    onClicked: root.executeAction()
+                    Behavior on y       { enabled: globalState.isLoaded; NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
+                    Behavior on opacity { enabled: globalState.isLoaded; NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                    Behavior on width   { enabled: globalState.isTransitioningToCast; NumberAnimation { duration: 400; easing.type: Easing.InOutCubic } }
+                    Behavior on height  { enabled: globalState.isTransitioningToCast; NumberAnimation { duration: 400; easing.type: Easing.InOutCubic } }
+                    Behavior on x       { enabled: globalState.isTransitioningToCast; NumberAnimation { duration: 400; easing.type: Easing.InOutCubic } }
+                    Behavior on radius  { enabled: globalState.isTransitioningToCast; NumberAnimation { duration: 400; easing.type: Easing.InOutCubic } }
+
+                    MouseArea { anchors.fill: parent }
+
+                    RowLayout {
+                        id: mainRow
+                        anchors.centerIn: parent
+                        spacing: 8
+
+                        IconButton { 
+                            iconName: "camera"
+                            isActive: globalState.isShot
+                            activeAccent: Config.ssAccent
+                            onClicked: globalState.isShot = true 
+                        }
+                        IconButton { 
+                            iconName: "video"
+                            isActive: !globalState.isShot
+                            activeAccent: Config.recAccent
+                            onClicked: globalState.isShot = false 
+                        }
+
+                        VDivider {}
+
+                        Rectangle {
+                            id: regionBtn
+                            height: 36
+                            Layout.preferredWidth: (globalState.captureMode === "region" && globalState.globalSelW > 4) ? regionBtnRow.implicitWidth + 16 : 36
+                            radius: 18
+                            color: globalState.captureMode === "region" ? Qt.rgba(globalState.accent.r, globalState.accent.g, globalState.accent.b, 0.15) : "transparent"
+                            border.width: globalState.captureMode === "region" ? 1 : 0
+                            border.color: globalState.accent
+
+                            Behavior on Layout.preferredWidth { 
+                                enabled: globalState.isLoaded
+                                NumberAnimation { duration: 350; easing.type: Easing.OutCubic } 
+                            }
+
+                            RowLayout {
+                                id: regionBtnRow
+                                anchors.centerIn: parent
+                                spacing: 5
+
+                                Icon {
+                                    name: "crop"
+                                    size: 20
+                                    color: globalState.captureMode === "region" ? globalState.accent : Config.textMuted
+                                }
+
+                                Text {
+                                    visible: globalState.captureMode === "region" && globalState.globalSelW > 4
+                                    text: Math.round(globalState.globalSelW) + " × " + Math.round(globalState.globalSelH)
+                                    font.pixelSize: 10
+                                    font.weight: Font.DemiBold
+                                    color: globalState.accent
+                                    Layout.rightMargin: 2
+                                }
+
+                                Icon {
+                                    visible: globalState.captureMode === "region" && globalState.globalSelW > 4
+                                    name: "restore"
+                                    size: 12
+                                    color: globalState.accent
+                                    opacity: 0.7
+                                    Layout.rightMargin: 2
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    globalState.captureMode = "region"
+                                    if (globalState.globalSelW > 4) {
+                                        globalState.globalSelW = 0
+                                        globalState.globalSelH = 0
+                                        globalState.isActivelyEditing = false
+                                    }
+                                }
+                            }
+                        }
+
+                        IconButton { 
+                            iconName: "app-window"
+                            isActive: globalState.captureMode === "window"
+                            isEnabled: globalState.isShot
+                            onClicked: globalState.captureMode = "window" 
+                        }
+                        IconButton { 
+                            iconName: "device-desktop"
+                            isActive: globalState.captureMode === "screen"
+                            onClicked: globalState.captureMode = "screen" 
+                        }
+
+                        VDivider {}
+
+                        IconButton {
+                            iconName: globalState.isShot ? (globalState.optPointer ? "pointer" : "pointer-off") : (globalState.optMic ? "microphone" : "microphone-off")
+                            isActive: globalState.isShot ? globalState.optPointer : globalState.optMic
+                            onClicked: globalState.isShot ? (globalState.optPointer = !globalState.optPointer) : (globalState.optMic = !globalState.optMic)
+                        }
+                        IconButton {
+                            iconName: globalState.isShot ? (globalState.optAnnotate ? "pencil" : "pencil-off") : (globalState.optAudio ? "volume" : "volume-3")
+                            isActive: globalState.isShot ? globalState.optAnnotate : globalState.optAudio
+                            onClicked: globalState.isShot ? (globalState.optAnnotate = !globalState.optAnnotate) : (globalState.optAudio = !globalState.optAudio)
+                        }
+
+                        VDivider {}
+
+                        IconButton {
+                            isPrimary: true
+                            iconName: globalState.captureMode === "region" && globalState.globalSelW <= 4 ? "crop" : globalState.isShot ? "camera-up" : "player-record"
+                            onClicked: globalState.executeAction()
+                        }
+                    }
                 }
             }
         }
