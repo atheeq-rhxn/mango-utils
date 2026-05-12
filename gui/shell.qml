@@ -166,7 +166,17 @@ Scope {
             a.push("-g", `${rx},${ry} ${rw}x${rh}`)
         } else if (captureMode === "window") {
             a.push("-w")
+        } else if (captureMode === "screen") {
+            if (uiOverlay.screen) {
+                const scale = uiOverlay.screen.devicePixelRatio || 1.0
+                const sx = Math.round(uiOverlay.screen.x)
+                const sy = Math.round(uiOverlay.screen.y)
+                const sw = Math.round(uiOverlay.screen.width * scale)
+                const sh = Math.round(uiOverlay.screen.height * scale)
+                a.push("-g", `${sx},${sy} ${sw}x${sh}`)
+            }
         }
+
         if (forShot) {
             if (optPointer) a.push("-p")
             if (optAnnotate) a.push("-a")
