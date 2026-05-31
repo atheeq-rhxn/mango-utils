@@ -25,7 +25,11 @@ if [[ ${args[--window]} ]]; then
     echo "missing dependency: mmsg (required for --window)" >&2
     exit 1
   fi
-  geometry=$(mmsg -x | awk '/x / {x=$3} /y / {y=$3} /width / {w=$3} /height / {h=$3} END {print x","y" "w"x"h}')
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "missing dependency: jq (required for --window)" >&2
+    exit 1
+  fi
+  geometry=$(mmsg get focusing-client | jq -r '"\(.x),\(.y) \(.width)x\(.height)"')
   if [[ -z "$geometry" ]]; then
     echo "Error: No active window found or mmsg failed." >&2
     exit 1
