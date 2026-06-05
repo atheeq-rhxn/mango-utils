@@ -1,6 +1,6 @@
 name: msnap
 help: Mango snap - screenshot and screencast tool
-version: 0.3.5
+version: 0.3.6
 
 commands:
 - name: shot
