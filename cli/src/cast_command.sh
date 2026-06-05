@@ -19,7 +19,14 @@ build_cmd() {
   elif [[ ${args[--region]:-} ]]; then
     geometry="$(slurp -d)" || { echo "Error: Failed to select region" >&2; exit 1; }
   fi
-  cmd=(gpu-screen-recorder)
+  if command -v gpu-screen-recorder > /dev/null 2>&1; then
+    cmd=(gpu-screen-recorder)
+  elif command -v flatpak > /dev/null 2>&1 && flatpak list --app 2>/dev/null | grep -q "com.dec05eba.gpu_screen_recorder"; then
+    cmd=(flatpak run --command=gpu-screen-recorder com.dec05eba.gpu_screen_recorder)
+  else
+    echo "Error: gpu-screen-recorder not found" >&2
+    exit 1
+  fi
   if [[ -n "$geometry" ]]; then
     local x y w h
     IFS=',x ' read -r x y w h <<< "$geometry"
@@ -47,8 +54,10 @@ build_cmd() {
 }
 
 if [[ -f "$recording_pid_file" ]]; then
-  pkill -SIGINT -f "gpu-screen-recorder"
-  while pgrep -f "gpu-screen-recorder" > /dev/null; do sleep 0.1; done
+  pkill -SIGINT -f "^(/nix/store/[^/]*-)?gpu-screen-recorder" 2>/dev/null || \
+  pkill -SIGINT -f "^com\.dec05eba\.gpu_screen_recorder" 2>/dev/null || true
+  (sleep 5 && pkill -9 -f "^(/nix/store/[^/]*-)?gpu-screen-recorder" 2>/dev/null; \
+              pkill -9 -f "^com\.dec05eba\.gpu_screen_recorder" 2>/dev/null; true) &
   rm -f "$recording_pid_file" "/tmp/msnap-cast.starttime"
   if [[ -f "$recording_filepath_file" ]]; then
     filepath=$(<"$recording_filepath_file")
