@@ -423,7 +423,7 @@ ini_load() {
     elif [[ $line =~ $key_regex ]]; then
       key="${BASH_REMATCH[1]}"
       value="${BASH_REMATCH[2]}"
-      [[ $value == *\$* ]] && eval "value=\"$value\""
+      [[ $value == *\$* ]] && value=$(envsubst <<<"$value")
       ini["${section}${key}"]="$value"
     fi
   done <"$ini_file"
@@ -572,7 +572,11 @@ msnap_shot_command() {
       echo "missing dependency: mmsg (required for --window)" >&2
       exit 1
     fi
-    geometry=$(mmsg -x | awk '/x / {x=$3} /y / {y=$3} /width / {w=$3} /height / {h=$3} END {print x","y" "w"x"h}')
+    if ! command -v jq >/dev/null 2>&1; then
+      echo "missing dependency: jq (required for --window)" >&2
+      exit 1
+    fi
+    geometry=$(mmsg get focusing-client | jq -r '"\(.x),\(.y) \(.width)x\(.height)"')
     if [[ -z "$geometry" ]]; then
       echo "Error: No active window found or mmsg failed." >&2
       exit 1
@@ -667,7 +671,14 @@ msnap_cast_command() {
     elif [[ ${args[--region]:-} ]]; then
       geometry="$(slurp -d)" || { echo "Error: Failed to select region" >&2; exit 1; }
     fi
-    cmd=(gpu-screen-recorder)
+    if command -v gpu-screen-recorder > /dev/null 2>&1; then
+      cmd=(gpu-screen-recorder)
+    elif command -v flatpak > /dev/null 2>&1 && flatpak list --app 2>/dev/null | grep -q "com.dec05eba.gpu_screen_recorder"; then
+      cmd=(flatpak run --command=gpu-screen-recorder com.dec05eba.gpu_screen_recorder)
+    else
+      echo "Error: gpu-screen-recorder not found" >&2
+      exit 1
+    fi
     if [[ -n "$geometry" ]]; then
       local x y w h
       IFS=',x ' read -r x y w h <<< "$geometry"
@@ -695,8 +706,10 @@ msnap_cast_command() {
   }
 
   if [[ -f "$recording_pid_file" ]]; then
-    pkill -SIGINT -f "^gpu-screen-recorder"
-    while pgrep -f "^gpu-screen-recorder" > /dev/null; do sleep 0.1; done
+    pkill -SIGINT -f "^(/nix/store/[^/]*-)?gpu-screen-recorder" 2>/dev/null || \
+    pkill -SIGINT -f "^com\.dec05eba\.gpu_screen_recorder" 2>/dev/null || true
+    (sleep 5 && pkill -9 -f "^(/nix/store/[^/]*-)?gpu-screen-recorder" 2>/dev/null; \
+                pkill -9 -f "^com\.dec05eba\.gpu_screen_recorder" 2>/dev/null; true) &
     rm -f "$recording_pid_file" "/tmp/msnap-cast.starttime"
     if [[ -f "$recording_filepath_file" ]]; then
       filepath=$(<"$recording_filepath_file")
@@ -925,7 +938,9 @@ msnap_update_command() {
         install -m644 "${src}/${dest#*/msnap/}" "$dest" \
           || { echo "Error: Failed to install $(basename "$dest")." >&2; exit 1; } ;;
       *)
-        sed "s|@GUI_PATH@|${gui_dir}|g" "${src}/cli/msnap" \
+        sed -e "s|@GUI_PATH@|${gui_dir}|g" \
+            -e "s|@VERSION@|${target_version}|g" \
+            -e "s|@MANIFEST_PATH@|${manifest}|g" "${src}/cli/msnap" \
           | install -m755 /dev/stdin "$dest" \
           || { echo "Error: Failed to install binary." >&2; exit 1; } ;;
     esac
@@ -1848,7 +1863,7 @@ msnap_update_parse_requirements() {
 
 # :command.initialize
 initialize() {
-  declare -g version="0.3.2"
+  declare -g version="0.3.6"
   set -e
 
   # src/initialize.sh

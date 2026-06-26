@@ -107,7 +107,9 @@ while IFS= read -r dest; do
       install -m644 "${src}/${dest#*/msnap/}" "$dest" \
         || { echo "Error: Failed to install $(basename "$dest")." >&2; exit 1; } ;;
     *)
-      sed "s|@GUI_PATH@|${gui_dir}|g" "${src}/cli/msnap" \
+      sed -e "s|@GUI_PATH@|${gui_dir}|g" \
+          -e "s|@VERSION@|${target_version}|g" \
+          -e "s|@MANIFEST_PATH@|${manifest}|g" "${src}/cli/msnap" \
         | install -m755 /dev/stdin "$dest" \
         || { echo "Error: Failed to install binary." >&2; exit 1; } ;;
   esac
