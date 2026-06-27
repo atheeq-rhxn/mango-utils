@@ -37,4 +37,8 @@ for dir in "$config_home" "${_sys_dirs[@]}"; do
   fi
 done
 
+if [[ ${args['--no-freeze']} ]]; then
+  export MSNAP_NO_FREEZE=1
+fi
+
 exec qs -p "$TARGET_DIR"

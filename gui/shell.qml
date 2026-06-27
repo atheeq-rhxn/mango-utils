@@ -202,6 +202,11 @@ Scope {
 
     function enterFreeze() {
         if (freezeState !== "idle") return
+        if (!Config.freezeEnabled) {
+            freezeState = "frozen"
+            windowsVisible = true
+            return
+        }
         freezeState = "freezing"
         windowsVisible = false
         wayfreezeProcess.running = true

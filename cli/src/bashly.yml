@@ -132,6 +132,9 @@ commands:
   help: Launch the graphical interface
   dependencies:
     - qs
+  flags:
+  - long: --no-freeze
+    help: Skip screen freeze (no wayfreeze)
 
 - name: uninstall
   help: Uninstall msnap

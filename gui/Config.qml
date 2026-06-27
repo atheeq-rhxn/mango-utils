@@ -22,6 +22,8 @@ Singleton {
   property color instructionColor: "#ffffff"
   property real instructionAlpha: 0.65
 
+  readonly property bool freezeEnabled: Quickshell.env("MSNAP_NO_FREEZE") !== "1"
+
   // Paths
   readonly property string homePath: Quickshell.env("HOME")
 
@@ -72,7 +74,7 @@ Singleton {
         // Convert snake_case to camelCase
         const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 
-        if (camelKey in root) {
+        if (camelKey in root && camelKey !== "freezeEnabled") {
           if (value === "true") updates[camelKey] = true;
           else if (value === "false") updates[camelKey] = false;
           else updates[camelKey] = value;

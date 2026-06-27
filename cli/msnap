@@ -245,7 +245,7 @@ msnap_gui_usage() {
   printf "msnap gui - Launch the graphical interface\n\n"
 
   printf "%s\n" "Usage:"
-  printf "  msnap gui\n"
+  printf "  msnap gui [OPTIONS]\n"
   printf "  msnap gui --help | -h\n"
   echo
 
@@ -253,6 +253,12 @@ msnap_gui_usage() {
   if [[ -n "$long_usage" ]]; then
     # :command.usage_options
     printf "%s\n" "Options:"
+
+    # :command.usage_flags
+    # :flag.usage
+    printf "  %s\n" "--no-freeze"
+    printf "    Skip screen freeze (no wayfreeze)\n"
+    echo
 
     # :command.usage_fixed_flags
     printf "  %s\n" "--help, -h"
@@ -792,6 +798,10 @@ msnap_gui_command() {
       break
     fi
   done
+
+  if [[ ${args['--no-freeze']} ]]; then
+    export MSNAP_NO_FREEZE=1
+  fi
 
   exec qs -p "$TARGET_DIR"
 
@@ -1667,6 +1677,13 @@ msnap_gui_parse_requirements() {
   while [[ $# -gt 0 ]]; do
     key="$1"
     case "$key" in
+      # :flag.case
+      --no-freeze)
+
+        # :flag.case_no_arg
+        args['--no-freeze']=1
+        shift
+        ;;
 
       -?*)
         printf "invalid option: %s\n" "$key" >&2
