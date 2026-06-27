@@ -5,6 +5,7 @@ import QtQuick.Window
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import "components"
 
 Scope {
 
@@ -419,11 +420,13 @@ Scope {
                         iconName: "app-window"
                         isActive: captureState.captureArea === "window"
                         isEnabled: captureState.isShot
+                        activeAccent: captureState.accentColor
                         onClicked: captureState.captureArea = "window"
                     }
                     IconButton {
                         iconName: "device-desktop"
                         isActive: captureState.captureArea === "screen"
+                        activeAccent: captureState.accentColor
                         onClicked: captureState.captureArea = "screen"
                     }
 
@@ -432,11 +435,13 @@ Scope {
                     IconButton {
                         iconName: captureState.isShot ? (captureState.pointer ? "pointer" : "pointer-off") : (captureState.mic ? "microphone" : "microphone-off")
                         isActive: captureState.isShot ? captureState.pointer : captureState.mic
+                        activeAccent: captureState.accentColor
                         onClicked: captureState.isShot ? (captureState.pointer = !captureState.pointer) : (captureState.mic = !captureState.mic)
                     }
                     IconButton {
                         iconName: captureState.isShot ? (captureState.annotate ? "pencil" : "pencil-off") : (captureState.audio ? "volume" : "volume-3")
                         isActive: captureState.isShot ? captureState.annotate : captureState.audio
+                        activeAccent: captureState.accentColor
                         onClicked: captureState.isShot ? (captureState.annotate = !captureState.annotate) : (captureState.audio = !captureState.audio)
                     }
 
@@ -445,51 +450,12 @@ Scope {
                     IconButton {
                         isPrimary: true
                         iconName: captureState.captureArea === "region" && selectionState.rectWidth <= selectionState.minimumSize ? "crop" : captureState.isShot ? "camera-up" : "player-record"
+                        activeAccent: captureState.accentColor
                         onClicked: captureService.executeAction()
                     }
                 }
             }
         }
-    }
-
-    component IconButton: Rectangle {
-        property string iconName: ""
-        property bool isActive: false
-        property bool isEnabled: true
-        property bool isPrimary: false
-        property color activeAccent: captureState.accentColor
-        signal clicked
-
-        width: isPrimary ? 44 : 36
-        height: isPrimary ? 44 : 36
-        radius: height / 2
-        opacity: isEnabled ? 1.0 : 0.3
-        color: isPrimary ? activeAccent : (isActive ? Qt.rgba(activeAccent.r, activeAccent.g, activeAccent.b, 0.15) : "transparent")
-        border.width: isActive && !isPrimary ? 1 : 0
-        border.color: activeAccent
-
-        Icon {
-            anchors.centerIn: parent
-            name: parent.iconName
-            color: parent.isPrimary ? Config.bgColor : (parent.isActive ? parent.activeAccent : Config.textMuted)
-            size: parent.isPrimary ? 22 : 20
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            enabled: parent.isEnabled
-            cursorShape: parent.isEnabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-            onClicked: parent.clicked()
-        }
-    }
-
-    component VDivider: Rectangle {
-        width: 1
-        height: 24
-        color: Config.borderColor
-        Layout.alignment: Qt.AlignVCenter
-        Layout.leftMargin: 2
-        Layout.rightMargin: 2
     }
 
     PanelWindow {
