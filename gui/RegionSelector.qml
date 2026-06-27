@@ -5,7 +5,7 @@ import QtQuick.Window
 Item {
     id: root
 
-    visible: globalState.captureMode === "region"
+    visible: captureState.captureArea === "region"
 
     property real scaleFactor: 1.0
     property real screenOffsetX: 0
@@ -67,7 +67,7 @@ Item {
     readonly property int resizeMinimum: 8
 
     function clampToScreen(globalX, globalY) {
-        if (globalState.isShot)
+        if (captureState.isShot)
             return {
                 x: globalX,
                 y: globalY
@@ -296,7 +296,7 @@ Item {
                 const dx = currentGlobalX - selectionState.moveGrabX;
                 const dy = currentGlobalY - selectionState.moveGrabY;
 
-                if (!globalState.isShot) {
+                if (!captureState.isShot) {
                     const maxX = screenOffsetX + (root.width * scaleFactor) - selectionState.rectWidth;
                     const maxY = screenOffsetY + (root.height * scaleFactor) - selectionState.rectHeight;
                     selectionState.rectX = Math.max(screenOffsetX, Math.min(selectionState.moveOriginX + dx, maxX));

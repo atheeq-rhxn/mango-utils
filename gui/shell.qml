@@ -23,38 +23,13 @@ Scope {
         id: freezeState
     }
 
-    property bool isLoaded: false
-    property bool isShot: true
-    property string captureMode: "region"
-    property bool isCollapsed: false
+    CaptureState {
+        id: captureState
+    }
 
-    property bool optPointer: false
-    property bool optAnnotate: false
-    property bool optMic: false
-    property bool optAudio: false
+    property bool isLoaded: false
 
     property bool windowsVisible: true
-
-    readonly property color accent: isShot ? Config.ssAccent : Config.recAccent
-    readonly property color pillBg: Qt.rgba(Config.surfaceColor.r, Config.surfaceColor.g, Config.surfaceColor.b, 0.88)
-
-    onIsShotChanged: {
-        if (!isShot) {
-            if (captureMode === "window")
-                captureMode = "region";
-            selectionState.cancelInteraction();
-            selectionState.clampToScreen(activeScreen);
-        }
-    }
-
-    onCaptureModeChanged: {
-        if (!isLoaded)
-            return;
-        if (captureMode !== "region") {
-            isCollapsed = false;
-            selectionState.clear();
-        }
-    }
 
     onWindowsVisibleChanged: {
         if (!windowsVisible)
@@ -63,7 +38,7 @@ Scope {
 
     Component.onCompleted: {
         globalState.isLoaded = true;
-        if (isShot)
+        if (captureState.isShot)
             freezeState.enter();
     }
 
@@ -89,34 +64,34 @@ Scope {
 
     function buildArgs(sub, forShot) {
         const a = [Config.msnapPath, sub];
-        if (captureMode === "region" && selectionState.rectWidth > selectionState.minimumSize && selectionState.rectHeight > selectionState.minimumSize) {
+        if (captureState.captureArea === "region" && selectionState.rectWidth > selectionState.minimumSize && selectionState.rectHeight > selectionState.minimumSize) {
             const rx = Math.round(selectionState.rectX);
             const ry = Math.round(selectionState.rectY);
             const rw = Math.round(selectionState.rectWidth);
             const rh = Math.round(selectionState.rectHeight);
             a.push("-g", `${rx},${ry} ${rw}x${rh}`);
-        } else if (captureMode === "window") {
+        } else if (captureState.captureArea === "window") {
             a.push("-w");
         }
 
         if (forShot) {
-            if (optPointer)
+            if (captureState.pointer)
                 a.push("-p");
-            if (optAnnotate)
+            if (captureState.annotate)
                 a.push("-a");
         } else {
-            if (optMic)
+            if (captureState.mic)
                 a.push("-m");
-            if (optAudio)
+            if (captureState.audio)
                 a.push("-a");
         }
         return a;
     }
 
     function executeAction() {
-        if (captureMode === "region" && (selectionState.rectWidth <= selectionState.minimumSize || selectionState.rectHeight <= selectionState.minimumSize))
+        if (captureState.captureArea === "region" && (selectionState.rectWidth <= selectionState.minimumSize || selectionState.rectHeight <= selectionState.minimumSize))
             return;
-        isShot ? doShot() : castState.doCast();
+        captureState.isShot ? doShot() : castState.doCast();
     }
 
     function doShot() {
@@ -152,18 +127,18 @@ Scope {
                     forceActiveFocus()
 
                 function cycleTarget(dir) {
-                    const modes = globalState.isShot ? ["region", "window", "screen"] : ["region", "screen"];
-                    const i = modes.indexOf(globalState.captureMode);
-                    globalState.captureMode = modes[((i < 0 ? 0 : i) + dir + modes.length) % modes.length];
+                    const modes = captureState.isShot ? ["region", "window", "screen"] : ["region", "screen"];
+                    const i = modes.indexOf(captureState.captureArea);
+                    captureState.captureArea = modes[((i < 0 ? 0 : i) + dir + modes.length) % modes.length];
                 }
 
-                Keys.onTabPressed: globalState.isShot = !globalState.isShot
-                Keys.onBacktabPressed: globalState.isShot = !globalState.isShot
+                Keys.onTabPressed: captureState.isShot = !captureState.isShot
+                Keys.onBacktabPressed: captureState.isShot = !captureState.isShot
                 Keys.onReturnPressed: globalState.executeAction()
                 Keys.onEnterPressed: globalState.executeAction()
                 Keys.onSpacePressed: globalState.executeAction()
                 Keys.onEscapePressed: {
-                    if (globalState.captureMode === "region" && selectionState.rectWidth > selectionState.minimumSize) {
+                    if (captureState.captureArea === "region" && selectionState.rectWidth > selectionState.minimumSize) {
                         selectionState.clear();
                     } else {
                         globalState.closeAll();
@@ -173,45 +148,45 @@ Scope {
                 readonly property var keyHandlers: ({
                         [Qt.Key_H]: () => cycleTarget(-1),
                         [Qt.Key_J]: () => {
-                            globalState.isShot = !globalState.isShot;
+                            captureState.isShot = !captureState.isShot;
                         },
                         [Qt.Key_K]: () => {
-                            globalState.isShot = !globalState.isShot;
+                            captureState.isShot = !captureState.isShot;
                         },
                         [Qt.Key_L]: () => cycleTarget(1),
                         [Qt.Key_Left]: () => cycleTarget(-1),
                         [Qt.Key_Right]: () => cycleTarget(1),
                         [Qt.Key_S]: () => {
-                            globalState.isShot = true;
+                            captureState.isShot = true;
                         },
                         [Qt.Key_V]: () => {
-                            globalState.isShot = false;
+                            captureState.isShot = false;
                         },
                         [Qt.Key_R]: () => {
-                            globalState.captureMode = "region";
+                            captureState.captureArea = "region";
                         },
                         [Qt.Key_W]: () => {
-                            if (globalState.isShot)
-                                globalState.captureMode = "window";
+                            if (captureState.isShot)
+                                captureState.captureArea = "window";
                         },
                         [Qt.Key_F]: () => {
-                            globalState.captureMode = "screen";
+                            captureState.captureArea = "screen";
                         },
                         [Qt.Key_P]: () => {
-                            if (globalState.isShot)
-                                globalState.optPointer = !globalState.optPointer;
+                            if (captureState.isShot)
+                                captureState.pointer = !captureState.pointer;
                         },
                         [Qt.Key_E]: () => {
-                            if (globalState.isShot)
-                                globalState.optAnnotate = !globalState.optAnnotate;
+                            if (captureState.isShot)
+                                captureState.annotate = !captureState.annotate;
                         },
                         [Qt.Key_M]: () => {
-                            if (!globalState.isShot)
-                                globalState.optMic = !globalState.optMic;
+                            if (!captureState.isShot)
+                                captureState.mic = !captureState.mic;
                         },
                         [Qt.Key_A]: () => {
-                            if (!globalState.isShot)
-                                globalState.optAudio = !globalState.optAudio;
+                            if (!captureState.isShot)
+                                captureState.audio = !captureState.audio;
                         }
                     })
 
@@ -226,7 +201,7 @@ Scope {
                 MouseArea {
                     anchors.fill: parent
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-                    enabled: globalState.captureMode !== "region"
+                    enabled: captureState.captureArea !== "region"
                     onClicked: globalState.closeAll()
                     z: 0
                 }
@@ -276,7 +251,7 @@ Scope {
                 width: toastRow.implicitWidth + 24
                 height: 44
                 radius: 22
-                color: globalState.pillBg
+                color: captureState.pillBackground
                 border.color: Config.recAccent
                 border.width: 1
                 opacity: castState.showCastAlert ? 1.0 : 0.0
@@ -324,17 +299,17 @@ Scope {
 
             Rectangle {
                 id: pullTab
-                visible: !castState.showCastAlert && !castState.isTransitioningToCast && globalState.captureMode === "region"
+                visible: !castState.showCastAlert && !castState.isTransitioningToCast && captureState.captureArea === "region"
                 z: 11
                 width: 48
                 height: 24
                 radius: 12
-                color: globalState.pillBg
+                color: captureState.pillBackground
                 border.color: Config.borderColor
                 border.width: 1
 
                 x: (parent.width - width) / 2
-                y: selectionState.isEditing ? parent.height + 10 : (globalState.isCollapsed ? parent.height - 24 : parent.height - toolbar.idleH - 40 - height + 12)
+                y: selectionState.isEditing ? parent.height + 10 : (captureState.toolbarCollapsed ? parent.height - 24 : parent.height - toolbar.idleH - 40 - height + 12)
 
                 Behavior on y {
                     enabled: globalState.isLoaded
@@ -346,8 +321,8 @@ Scope {
 
                 Icon {
                     anchors.centerIn: parent
-                    anchors.verticalCenterOffset: globalState.isCollapsed ? 0 : -2
-                    name: globalState.isCollapsed ? "chevron-up" : "chevron-down"
+                    anchors.verticalCenterOffset: captureState.toolbarCollapsed ? 0 : -2
+                    name: captureState.toolbarCollapsed ? "chevron-up" : "chevron-down"
                     size: 16
                     color: Config.textMuted
                 }
@@ -355,7 +330,7 @@ Scope {
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: globalState.isCollapsed = !globalState.isCollapsed
+                    onClicked: captureState.toolbarCollapsed = !captureState.toolbarCollapsed
                 }
             }
 
@@ -373,9 +348,9 @@ Scope {
                 height: castState.isTransitioningToCast ? 44 : idleH
                 radius: castState.isTransitioningToCast ? 3 : idleH / 2
 
-                y: selectionState.isEditing ? parent.height + 10 : (globalState.isCollapsed && globalState.captureMode === "region" ? parent.height + 10 : parent.height - idleH - 40)
+                y: selectionState.isEditing ? parent.height + 10 : (captureState.toolbarCollapsed && captureState.captureArea === "region" ? parent.height + 10 : parent.height - idleH - 40)
 
-                color: globalState.pillBg
+                color: captureState.pillBackground
                 border.color: castState.isTransitioningToCast ? Config.recAccent : Config.borderColor
                 border.width: 1
                 opacity: castState.isTransitioningToCast ? 0.0 : (selectionState.isEditing ? 0.0 : 1.0)
@@ -434,15 +409,15 @@ Scope {
 
                     IconButton {
                         iconName: "camera"
-                        isActive: globalState.isShot
+                        isActive: captureState.isShot
                         activeAccent: Config.ssAccent
-                        onClicked: globalState.isShot = true
+                        onClicked: captureState.isShot = true
                     }
                     IconButton {
                         iconName: "video"
-                        isActive: !globalState.isShot
+                        isActive: !captureState.isShot
                         activeAccent: Config.recAccent
-                        onClicked: globalState.isShot = false
+                        onClicked: captureState.isShot = false
                     }
 
                     VDivider {}
@@ -450,11 +425,11 @@ Scope {
                     Rectangle {
                         id: regionBtn
                         implicitHeight: 36
-                        Layout.preferredWidth: (globalState.captureMode === "region" && selectionState.rectWidth > selectionState.minimumSize) ? regionBtnRow.implicitWidth + 16 : 36
+                        Layout.preferredWidth: (captureState.captureArea === "region" && selectionState.rectWidth > selectionState.minimumSize) ? regionBtnRow.implicitWidth + 16 : 36
                         radius: 18
-                        color: globalState.captureMode === "region" ? Qt.rgba(globalState.accent.r, globalState.accent.g, globalState.accent.b, 0.15) : "transparent"
-                        border.width: globalState.captureMode === "region" ? 1 : 0
-                        border.color: globalState.accent
+                        color: captureState.captureArea === "region" ? Qt.rgba(captureState.accentColor.r, captureState.accentColor.g, captureState.accentColor.b, 0.15) : "transparent"
+                        border.width: captureState.captureArea === "region" ? 1 : 0
+                        border.color: captureState.accentColor
 
                         Behavior on Layout.preferredWidth {
                             enabled: globalState.isLoaded
@@ -472,23 +447,23 @@ Scope {
                             Icon {
                                 name: "crop"
                                 size: 20
-                                color: globalState.captureMode === "region" ? globalState.accent : Config.textMuted
+                                color: captureState.captureArea === "region" ? captureState.accentColor : Config.textMuted
                             }
 
                             Text {
-                                visible: globalState.captureMode === "region" && selectionState.rectWidth > selectionState.minimumSize
+                                visible: captureState.captureArea === "region" && selectionState.rectWidth > selectionState.minimumSize
                                 text: Math.round(selectionState.rectWidth) + " × " + Math.round(selectionState.rectHeight)
                                 font.pixelSize: 10
                                 font.weight: Font.DemiBold
-                                color: globalState.accent
+                                color: captureState.accentColor
                                 Layout.rightMargin: 2
                             }
 
                             Icon {
-                                visible: globalState.captureMode === "region" && selectionState.rectWidth > selectionState.minimumSize
+                                visible: captureState.captureArea === "region" && selectionState.rectWidth > selectionState.minimumSize
                                 name: "restore"
                                 size: 12
-                                color: globalState.accent
+                                color: captureState.accentColor
                                 opacity: 0.7
                                 Layout.rightMargin: 2
                             }
@@ -498,7 +473,7 @@ Scope {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                globalState.captureMode = "region";
+                                captureState.captureArea = "region";
                                 if (selectionState.rectWidth > selectionState.minimumSize) {
                                     selectionState.clear();
                                 }
@@ -508,34 +483,34 @@ Scope {
 
                     IconButton {
                         iconName: "app-window"
-                        isActive: globalState.captureMode === "window"
-                        isEnabled: globalState.isShot
-                        onClicked: globalState.captureMode = "window"
+                        isActive: captureState.captureArea === "window"
+                        isEnabled: captureState.isShot
+                        onClicked: captureState.captureArea = "window"
                     }
                     IconButton {
                         iconName: "device-desktop"
-                        isActive: globalState.captureMode === "screen"
-                        onClicked: globalState.captureMode = "screen"
+                        isActive: captureState.captureArea === "screen"
+                        onClicked: captureState.captureArea = "screen"
                     }
 
                     VDivider {}
 
                     IconButton {
-                        iconName: globalState.isShot ? (globalState.optPointer ? "pointer" : "pointer-off") : (globalState.optMic ? "microphone" : "microphone-off")
-                        isActive: globalState.isShot ? globalState.optPointer : globalState.optMic
-                        onClicked: globalState.isShot ? (globalState.optPointer = !globalState.optPointer) : (globalState.optMic = !globalState.optMic)
+                        iconName: captureState.isShot ? (captureState.pointer ? "pointer" : "pointer-off") : (captureState.mic ? "microphone" : "microphone-off")
+                        isActive: captureState.isShot ? captureState.pointer : captureState.mic
+                        onClicked: captureState.isShot ? (captureState.pointer = !captureState.pointer) : (captureState.mic = !captureState.mic)
                     }
                     IconButton {
-                        iconName: globalState.isShot ? (globalState.optAnnotate ? "pencil" : "pencil-off") : (globalState.optAudio ? "volume" : "volume-3")
-                        isActive: globalState.isShot ? globalState.optAnnotate : globalState.optAudio
-                        onClicked: globalState.isShot ? (globalState.optAnnotate = !globalState.optAnnotate) : (globalState.optAudio = !globalState.optAudio)
+                        iconName: captureState.isShot ? (captureState.annotate ? "pencil" : "pencil-off") : (captureState.audio ? "volume" : "volume-3")
+                        isActive: captureState.isShot ? captureState.annotate : captureState.audio
+                        onClicked: captureState.isShot ? (captureState.annotate = !captureState.annotate) : (captureState.audio = !captureState.audio)
                     }
 
                     VDivider {}
 
                     IconButton {
                         isPrimary: true
-                        iconName: globalState.captureMode === "region" && selectionState.rectWidth <= selectionState.minimumSize ? "crop" : globalState.isShot ? "camera-up" : "player-record"
+                        iconName: captureState.captureArea === "region" && selectionState.rectWidth <= selectionState.minimumSize ? "crop" : captureState.isShot ? "camera-up" : "player-record"
                         onClicked: globalState.executeAction()
                     }
                 }
@@ -548,7 +523,7 @@ Scope {
         property bool isActive: false
         property bool isEnabled: true
         property bool isPrimary: false
-        property color activeAccent: globalState.accent
+        property color activeAccent: captureState.accentColor
         signal clicked
 
         width: isPrimary ? 44 : 36
@@ -612,7 +587,7 @@ Scope {
                 width: pillHover.containsMouse ? 150 : 6
                 height: 44
                 radius: pillHover.containsMouse ? 22 : 3
-                color: globalState.pillBg
+                color: captureState.pillBackground
                 border.width: 1
                 border.color: Config.recAccent
                 clip: true
