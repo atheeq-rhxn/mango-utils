@@ -27,6 +27,10 @@ Scope {
         id: captureState
     }
 
+    CaptureService {
+        id: captureService
+    }
+
     property bool isLoaded: false
 
     property bool windowsVisible: true
@@ -40,64 +44,6 @@ Scope {
         globalState.isLoaded = true;
         if (captureState.isShot)
             freezeState.enter();
-    }
-
-    Process {
-        id: shotProcess
-
-        running: false
-
-        onExited: (code, status) => {
-            freezeState.exit();
-            windowsVisible = false;
-            if (!castState.isCasting)
-                Qt.quit();
-        }
-    }
-
-    function closeAll() {
-        freezeState.exit();
-        windowsVisible = false;
-        if (!castState.isCasting)
-            Qt.quit();
-    }
-
-    function buildArgs(sub, forShot) {
-        const a = [Config.msnapPath, sub];
-        if (captureState.captureArea === "region" && selectionState.rectWidth > selectionState.minimumSize && selectionState.rectHeight > selectionState.minimumSize) {
-            const rx = Math.round(selectionState.rectX);
-            const ry = Math.round(selectionState.rectY);
-            const rw = Math.round(selectionState.rectWidth);
-            const rh = Math.round(selectionState.rectHeight);
-            a.push("-g", `${rx},${ry} ${rw}x${rh}`);
-        } else if (captureState.captureArea === "window") {
-            a.push("-w");
-        }
-
-        if (forShot) {
-            if (captureState.pointer)
-                a.push("-p");
-            if (captureState.annotate)
-                a.push("-a");
-        } else {
-            if (captureState.mic)
-                a.push("-m");
-            if (captureState.audio)
-                a.push("-a");
-        }
-        return a;
-    }
-
-    function executeAction() {
-        if (captureState.captureArea === "region" && (selectionState.rectWidth <= selectionState.minimumSize || selectionState.rectHeight <= selectionState.minimumSize))
-            return;
-        captureState.isShot ? doShot() : castState.doCast();
-    }
-
-    function doShot() {
-        windowsVisible = false;
-        shotProcess.command = buildArgs("shot", true);
-        shotProcess.running = true;
     }
 
     Variants {
@@ -134,14 +80,14 @@ Scope {
 
                 Keys.onTabPressed: captureState.isShot = !captureState.isShot
                 Keys.onBacktabPressed: captureState.isShot = !captureState.isShot
-                Keys.onReturnPressed: globalState.executeAction()
-                Keys.onEnterPressed: globalState.executeAction()
-                Keys.onSpacePressed: globalState.executeAction()
+                Keys.onReturnPressed: captureService.executeAction()
+                Keys.onEnterPressed: captureService.executeAction()
+                Keys.onSpacePressed: captureService.executeAction()
                 Keys.onEscapePressed: {
                     if (captureState.captureArea === "region" && selectionState.rectWidth > selectionState.minimumSize) {
                         selectionState.clear();
                     } else {
-                        globalState.closeAll();
+                        captureService.closeAll();
                     }
                 }
 
@@ -202,7 +148,7 @@ Scope {
                     anchors.fill: parent
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                     enabled: captureState.captureArea !== "region"
-                    onClicked: globalState.closeAll()
+                    onClicked: captureService.closeAll()
                     z: 0
                 }
 
@@ -511,7 +457,7 @@ Scope {
                     IconButton {
                         isPrimary: true
                         iconName: captureState.captureArea === "region" && selectionState.rectWidth <= selectionState.minimumSize ? "crop" : captureState.isShot ? "camera-up" : "player-record"
-                        onClicked: globalState.executeAction()
+                        onClicked: captureService.executeAction()
                     }
                 }
             }

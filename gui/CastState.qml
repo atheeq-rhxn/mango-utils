@@ -46,7 +46,7 @@ Scope {
         onTriggered: {
             isTransitioningToCast = false;
             freezeState.exit();
-            const a = globalState.buildArgs("cast", false);
+            const a = captureService.buildArgs("cast", false);
             a.push("--toggle");
             Quickshell.execDetached(a);
             isCasting = true;

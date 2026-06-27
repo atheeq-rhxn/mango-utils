@@ -248,7 +248,7 @@ Item {
                 if (selectionState.hasSelection) {
                     selectionState.clear();
                 } else {
-                    globalState.closeAll();
+                    captureService.closeAll();
                 }
             }
         }
