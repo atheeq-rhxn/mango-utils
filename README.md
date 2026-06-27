@@ -6,6 +6,22 @@ https://github.com/user-attachments/assets/99f3e8dc-77af-43d6-9601-2bddf4e31675
 
 ---
 
+## Table of Contents
+
+- [Dependencies](#dependencies)
+- [Installation](#installation)
+- [Mango Setup](#mango-setup)
+- [Usage](#usage)
+  - [msnap shot](#msnap-shot)
+  - [msnap cast](#msnap-cast)
+- [GUI](#gui)
+- [Configuration](#configuration)
+- [XDG Paths](#xdg-paths)
+- [Updating](#updating)
+- [Uninstall](#uninstall)
+
+---
+
 ## Dependencies
 
 | Tool | Purpose |
@@ -15,10 +31,10 @@ https://github.com/user-attachments/assets/99f3e8dc-77af-43d6-9601-2bddf4e31675
 | [`wl-copy`](https://github.com/bugaevc/wl-clipboard) | Clipboard |
 | [`notify-send`](https://gitlab.gnome.org/GNOME/libnotify) | Notifications |
 | [`wayfreeze`](https://github.com/Jappie3/wayfreeze) | Freeze screen before capture |
-| [`satty`](https://github.com/gabm/Satty) | Annotation |
+| [`satty`](https://github.com/Satty-org/Satty) | Annotation |
 | [`gpu-screen-recorder`](https://git.dec05eba.com/gpu-screen-recorder/) | Screen recording |
-| [`quickshell`](https://github.com/quickshell-mirror/quickshell) | GUI |
-| [`ffmpeg`](https://git.ffmpeg.org/ffmpeg.git) | Recording thumbnail generation |
+| [`quickshell`](https://quickshell.org/) | GUI |
+| [`ffmpeg`](https://www.ffmpeg.org/) | Recording thumbnail generation |
 
 ---
 
@@ -30,7 +46,7 @@ curl -fsSL https://raw.githubusercontent.com/xtheeq/msnap/main/install.sh | bash
 
 The script will prompt for **user** or **system-wide** installation.
 
-### NixOS install
+### NixOS
 
 Add msnap's input and overlay in your `flake.nix`:
 
@@ -62,7 +78,7 @@ Then add `msnap` to your packages in `configuration.nix`:
 environment.systemPackages = [ pkgs.msnap ];
 ```
 
-Or for a standalone try without installing:
+Or try it without installing:
 
 ```sh
 nix run github:xtheeq/msnap -- shot
@@ -70,7 +86,7 @@ nix run github:xtheeq/msnap -- shot
 
 ---
 
-## Mango setup
+## Mango Setup
 
 ### Keybinds
 
@@ -80,7 +96,7 @@ bind=SHIFT,Print,spawn_shell,msnap shot --region
 bind=ALT,Print,spawn_shell,msnap cast --toggle --region
 ```
 
-### Layer rule
+### Layer Rule
 
 To prevent the GUI from being animated or blurred:
 
@@ -97,7 +113,7 @@ msnap shot [OPTIONS]   # take a screenshot
 msnap cast [OPTIONS]   # record the screen
 ```
 
-### `msnap shot`
+### msnap shot
 
 | Flag | Argument | Description |
 |------|----------|-------------|
@@ -113,9 +129,9 @@ msnap cast [OPTIONS]   # record the screen
 | `-n`, `--no-copy` | | Skip clipboard |
 | `-c`, `--only-copy` | | Clipboard only, don't save file |
 
-### `msnap cast`
+### msnap cast
 
-`--toggle` is required — call it once to start recording, again to stop.
+> **Note:** `--toggle` is required. Call it once to start recording, again to stop.
 
 | Flag | Argument | Description |
 |------|----------|-------------|
@@ -152,9 +168,10 @@ msnap gui
 |------|-------------|
 | `--no-freeze` | Skip screen freeze on launch (no `wayfreeze`) |
 
-### Keyboard shortcuts
+### Keyboard Shortcuts
 
-#### Mode selection
+**Mode selection**
+
 | Key | Action |
 |-----|--------|
 | `S` | Screenshot mode |
@@ -162,7 +179,8 @@ msnap gui
 | `J` / `K` | Switch between Screenshot and Record |
 | `Tab` | Toggle mode |
 
-#### Capture target
+**Capture target**
+
 | Key | Action |
 |-----|--------|
 | `H` / `L` | Navigate capture targets |
@@ -171,7 +189,8 @@ msnap gui
 | `W` | Active window *(screenshot only)* |
 | `F` | Full screen |
 
-#### Options
+**Options**
+
 | Key | Action |
 |-----|--------|
 | `P` | Toggle pointer *(screenshot only)* |
@@ -179,13 +198,14 @@ msnap gui
 | `M` | Toggle microphone *(recording only)* |
 | `A` | Toggle system audio *(recording only)* |
 
-#### Execution
+**Execution**
+
 | Key | Action |
 |-----|--------|
 | `Enter` / `Space` | Execute capture |
 | `Escape` | Clear selection / Close |
 
-### Mouse interactions
+### Mouse Interactions
 
 | Action | Result |
 |--------|--------|
@@ -202,7 +222,7 @@ msnap gui
 
 Config files live in `$XDG_CONFIG_HOME/msnap/` (default: `~/.config/msnap/`).
 
-### `msnap.conf`
+### msnap.conf
 
 | Key | Default | Description |
 |-----|---------|-------------|
@@ -221,17 +241,15 @@ Config files live in `$XDG_CONFIG_HOME/msnap/` (default: `~/.config/msnap/`).
 | `cast_container` | *(inferred)* | Container: `mp4`, `mkv`, `webm` |
 | `cast_tune` | `performance` | Encoding tune: `performance`, `quality` |
 
-> **Filename patterns** support standard `date` format tokens (`%Y`, `%m`, `%d`, `%H`, `%M`, `%S`, etc.)
+> Filename patterns support standard `date` format tokens (`%Y`, `%m`, `%d`, `%H`, `%M`, `%S`, etc.)
 
-### `gui.conf`
+### gui.conf
 
-Controls GUI theme (colors, accents, and alphas):
+Controls the GUI theme (colors, accents, and alpha values). See the default `gui.conf` for all available options.
 
-All other options control colors and alpha values for the UI. See the default `gui.conf` for available options.
+### Value Precedence
 
-### Value precedence
-
-Options resolve in this order (highest first):
+Options resolve in this order (highest priority first):
 
 1. CLI flags
 2. `msnap.conf`
@@ -252,7 +270,7 @@ Recordings include an auto-generated thumbnail in the notification.
 
 ---
 
-## XDG paths
+## XDG Paths
 
 msnap follows the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/latest/). Config is resolved from `$XDG_CONFIG_HOME/msnap/` first, falling back to `$XDG_CONFIG_DIRS/msnap/`.
 
@@ -269,22 +287,22 @@ msnap follows the [XDG Base Directory Specification](https://specifications.free
 ## Updating
 
 ```sh
-msnap update              # update to latest release
-msnap update --git        # update to latest git commit (unreleased)
-msnap update --check      # check for updates without installing
-msnap update --version x.x.x  # install specific version
-msnap update --force      # reinstall current version
+msnap update                    # update to latest release
+msnap update --git              # update to latest git commit (unreleased)
+msnap update --check            # check for updates without installing
+msnap update --version x.x.x   # install specific version
+msnap update --force            # reinstall current version
 ```
 
-> NOTE: Not supported for Nix-managed installs — use `nix flake update` instead.
+> Not supported for Nix-managed installs — use `nix flake update` instead.
 
 ---
 
 ## Uninstall
 
 ```sh
-msnap uninstall        # interactive
-msnap uninstall -f     # skip confirmation
+msnap uninstall      # interactive
+msnap uninstall -f   # skip confirmation
 ```
 
 > Nix-managed installs should use `nix-collect-garbage` or remove from `flake.nix`.

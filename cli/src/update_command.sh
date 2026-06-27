@@ -108,6 +108,7 @@ while IFS= read -r old_file; do
 done < "$manifest"
 
 echo "Installing..."
+failed=0
 while IFS= read -r dest; do
   case "$dest" in
     *.conf) ;;
@@ -115,17 +116,17 @@ while IFS= read -r dest; do
       sed "s|@GUI_PATH@|${gui_dir}|g" "${src}/assets/msnap.desktop.in" \
         | sed "s|@ICON_PATH@|${icon_file}|g" \
         | install -m644 /dev/stdin "$dest" \
-        || { echo "Error: Failed to install $(basename "$dest")." >&2; exit 1; } ;;
+        || { echo "Warning: Failed to install $(basename "$dest")." >&2; ((failed++)) || true; continue; } ;;
     */hicolor/*)
       install -m644 "${src}/assets/icons/msnap.svg" "$dest" \
-        || { echo "Error: Failed to install $(basename "$dest")." >&2; exit 1; } ;;
+        || { echo "Warning: Failed to install $(basename "$dest")." >&2; ((failed++)) || true; continue; } ;;
     */msnap/gui/Config.qml)
       sed "s|@BIN_PATH@|${bin_path}|g" "${src}/gui/Config.qml" \
         | install -m644 /dev/stdin "$dest" \
-        || { echo "Error: Failed to install Config.qml." >&2; exit 1; } ;;
+        || { echo "Warning: Failed to install Config.qml." >&2; ((failed++)) || true; continue; } ;;
     */msnap/*)
       install -m644 "${src}/${dest#*/msnap/}" "$dest" \
-        || { echo "Error: Failed to install $(basename "$dest")." >&2; exit 1; } ;;
+        || { echo "Warning: Failed to install $(basename "$dest")." >&2; ((failed++)) || true; continue; } ;;
     *)
       sed -e "s|@GUI_PATH@|${gui_dir}|g" \
           -e "s|@VERSION@|${target_version}|g" \
@@ -134,7 +135,18 @@ while IFS= read -r dest; do
         || { echo "Error: Failed to install binary." >&2; exit 1; } ;;
   esac
 done < "$new_manifest"
+
+# Preserve config file paths in manifest (not updated by this script)
+while IFS= read -r old_file; do
+  [[ "$old_file" == *.conf ]] && echo "$old_file" >> "$new_manifest"
+done < "$manifest"
+
+cp "$new_manifest" "$manifest"
 rm -f "$new_manifest"
+
+if (( failed > 0 )); then
+  echo "Warning: $failed file(s) could not be installed (see above)." >&2
+fi
 
 if [[ "$use_git" == true ]]; then
   echo "msnap updated to commit ${target_version:0:7}."
