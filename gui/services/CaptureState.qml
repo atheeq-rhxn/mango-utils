@@ -1,8 +1,9 @@
-pragma ComponentBehavior: Bound
+pragma Singleton
 import QtQuick
 import Quickshell
+import qs
 
-Scope {
+Singleton {
     id: root
 
     property bool isShot: true
@@ -21,17 +22,17 @@ Scope {
         if (!isShot) {
             if (captureArea === "window")
                 captureArea = "region";
-            selectionState.cancelInteraction();
-            selectionState.clampToScreen(activeScreen);
+            SelectionState.cancelInteraction();
+            SelectionState.clampToScreen(CaptureService.activeScreen);
         }
     }
 
     onCaptureAreaChanged: {
-        if (!captureService.isLoaded)
+        if (!CaptureService.isLoaded)
             return;
         if (captureArea !== "region") {
             toolbarCollapsed = false;
-            selectionState.clear();
+            SelectionState.clear();
         }
     }
 }

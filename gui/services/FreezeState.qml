@@ -1,9 +1,10 @@
-pragma ComponentBehavior: Bound
+pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs
 
-Scope {
+Singleton {
     id: root
 
     property string state: "idle"
@@ -19,7 +20,7 @@ Scope {
             onRead: data => {
                 if (data.indexOf("frozen") !== -1) {
                     root.state = "frozen";
-                    captureService.windowsVisible = true;
+                    CaptureService.windowsVisible = true;
                 }
             }
         }
@@ -36,11 +37,11 @@ Scope {
             return;
         if (!Config.freezeEnabled) {
             root.state = "frozen";
-            captureService.windowsVisible = true;
+            CaptureService.windowsVisible = true;
             return;
         }
         root.state = "freezing";
-        captureService.windowsVisible = false;
+        CaptureService.windowsVisible = false;
         wayfreezeProcess.running = true;
     }
 

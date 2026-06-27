@@ -1,9 +1,10 @@
-pragma ComponentBehavior: Bound
+pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs
 
-Scope {
+Singleton {
     id: root
 
     property var activeScreen: null
@@ -12,7 +13,7 @@ Scope {
 
     onWindowsVisibleChanged: {
         if (!windowsVisible)
-            selectionState.cancelInteraction();
+            SelectionState.cancelInteraction();
     }
 
     Process {
@@ -21,43 +22,43 @@ Scope {
         running: false
 
         onExited: (code, status) => {
-            freezeState.exit();
+            FreezeState.exit();
             root.windowsVisible = false;
-            if (!castState.isCasting)
+            if (!CastState.isCasting)
                 Qt.quit();
         }
     }
 
     function buildArgs(sub, forShot) {
         const a = [Config.msnapPath, sub];
-        if (captureState.captureArea === "region" && selectionState.rectWidth > selectionState.minimumSize && selectionState.rectHeight > selectionState.minimumSize) {
-            const rx = Math.round(selectionState.rectX);
-            const ry = Math.round(selectionState.rectY);
-            const rw = Math.round(selectionState.rectWidth);
-            const rh = Math.round(selectionState.rectHeight);
+        if (CaptureState.captureArea === "region" && SelectionState.rectWidth > SelectionState.minimumSize && SelectionState.rectHeight > SelectionState.minimumSize) {
+            const rx = Math.round(SelectionState.rectX);
+            const ry = Math.round(SelectionState.rectY);
+            const rw = Math.round(SelectionState.rectWidth);
+            const rh = Math.round(SelectionState.rectHeight);
             a.push("-g", `${rx},${ry} ${rw}x${rh}`);
-        } else if (captureState.captureArea === "window") {
+        } else if (CaptureState.captureArea === "window") {
             a.push("-w");
         }
 
         if (forShot) {
-            if (captureState.pointer)
+            if (CaptureState.pointer)
                 a.push("-p");
-            if (captureState.annotate)
+            if (CaptureState.annotate)
                 a.push("-a");
         } else {
-            if (captureState.mic)
+            if (CaptureState.mic)
                 a.push("-m");
-            if (captureState.audio)
+            if (CaptureState.audio)
                 a.push("-a");
         }
         return a;
     }
 
     function executeAction() {
-        if (captureState.captureArea === "region" && (selectionState.rectWidth <= selectionState.minimumSize || selectionState.rectHeight <= selectionState.minimumSize))
+        if (CaptureState.captureArea === "region" && (SelectionState.rectWidth <= SelectionState.minimumSize || SelectionState.rectHeight <= SelectionState.minimumSize))
             return;
-        captureState.isShot ? doShot() : castState.doCast();
+        CaptureState.isShot ? doShot() : CastState.doCast();
     }
 
     function doShot() {
@@ -67,9 +68,9 @@ Scope {
     }
 
     function closeAll() {
-        freezeState.exit();
+        FreezeState.exit();
         root.windowsVisible = false;
-        if (!castState.isCasting)
+        if (!CastState.isCasting)
             Qt.quit();
     }
 }

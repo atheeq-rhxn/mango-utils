@@ -6,33 +6,14 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import "components"
+import "services"
 
 Scope {
 
-    SelectionState {
-        id: selectionState
-    }
-
-    CastState {
-        id: castState
-    }
-
-    FreezeState {
-        id: freezeState
-    }
-
-    CaptureState {
-        id: captureState
-    }
-
-    CaptureService {
-        id: captureService
-    }
-
     Component.onCompleted: {
-        captureService.isLoaded = true;
-        if (captureState.isShot)
-            freezeState.enter();
+        CaptureService.isLoaded = true;
+        if (CaptureState.isShot)
+            FreezeState.enter();
     }
 
     Variants {
@@ -46,7 +27,7 @@ Scope {
             anchors.left: true
             anchors.right: true
             anchors.bottom: true
-            visible: captureService.windowsVisible
+            visible: CaptureService.windowsVisible
             color: "transparent"
 
             WlrLayershell.layer: WlrLayer.Overlay
@@ -62,66 +43,66 @@ Scope {
                     forceActiveFocus()
 
                 function cycleTarget(dir) {
-                    const modes = captureState.isShot ? ["region", "window", "screen"] : ["region", "screen"];
-                    const i = modes.indexOf(captureState.captureArea);
-                    captureState.captureArea = modes[((i < 0 ? 0 : i) + dir + modes.length) % modes.length];
+                    const modes = CaptureState.isShot ? ["region", "window", "screen"] : ["region", "screen"];
+                    const i = modes.indexOf(CaptureState.captureArea);
+                    CaptureState.captureArea = modes[((i < 0 ? 0 : i) + dir + modes.length) % modes.length];
                 }
 
-                Keys.onTabPressed: captureState.isShot = !captureState.isShot
-                Keys.onBacktabPressed: captureState.isShot = !captureState.isShot
-                Keys.onReturnPressed: captureService.executeAction()
-                Keys.onEnterPressed: captureService.executeAction()
-                Keys.onSpacePressed: captureService.executeAction()
+                Keys.onTabPressed: CaptureState.isShot = !CaptureState.isShot
+                Keys.onBacktabPressed: CaptureState.isShot = !CaptureState.isShot
+                Keys.onReturnPressed: CaptureService.executeAction()
+                Keys.onEnterPressed: CaptureService.executeAction()
+                Keys.onSpacePressed: CaptureService.executeAction()
                 Keys.onEscapePressed: {
-                    if (captureState.captureArea === "region" && selectionState.rectWidth > selectionState.minimumSize) {
-                        selectionState.clear();
+                    if (CaptureState.captureArea === "region" && SelectionState.rectWidth > SelectionState.minimumSize) {
+                        SelectionState.clear();
                     } else {
-                        captureService.closeAll();
+                        CaptureService.closeAll();
                     }
                 }
 
                 readonly property var keyHandlers: ({
                         [Qt.Key_H]: () => cycleTarget(-1),
                         [Qt.Key_J]: () => {
-                            captureState.isShot = !captureState.isShot;
+                            CaptureState.isShot = !CaptureState.isShot;
                         },
                         [Qt.Key_K]: () => {
-                            captureState.isShot = !captureState.isShot;
+                            CaptureState.isShot = !CaptureState.isShot;
                         },
                         [Qt.Key_L]: () => cycleTarget(1),
                         [Qt.Key_Left]: () => cycleTarget(-1),
                         [Qt.Key_Right]: () => cycleTarget(1),
                         [Qt.Key_S]: () => {
-                            captureState.isShot = true;
+                            CaptureState.isShot = true;
                         },
                         [Qt.Key_V]: () => {
-                            captureState.isShot = false;
+                            CaptureState.isShot = false;
                         },
                         [Qt.Key_R]: () => {
-                            captureState.captureArea = "region";
+                            CaptureState.captureArea = "region";
                         },
                         [Qt.Key_W]: () => {
-                            if (captureState.isShot)
-                                captureState.captureArea = "window";
+                            if (CaptureState.isShot)
+                                CaptureState.captureArea = "window";
                         },
                         [Qt.Key_F]: () => {
-                            captureState.captureArea = "screen";
+                            CaptureState.captureArea = "screen";
                         },
                         [Qt.Key_P]: () => {
-                            if (captureState.isShot)
-                                captureState.pointer = !captureState.pointer;
+                            if (CaptureState.isShot)
+                                CaptureState.pointer = !CaptureState.pointer;
                         },
                         [Qt.Key_E]: () => {
-                            if (captureState.isShot)
-                                captureState.annotate = !captureState.annotate;
+                            if (CaptureState.isShot)
+                                CaptureState.annotate = !CaptureState.annotate;
                         },
                         [Qt.Key_M]: () => {
-                            if (!captureState.isShot)
-                                captureState.mic = !captureState.mic;
+                            if (!CaptureState.isShot)
+                                CaptureState.mic = !CaptureState.mic;
                         },
                         [Qt.Key_A]: () => {
-                            if (!captureState.isShot)
-                                captureState.audio = !captureState.audio;
+                            if (!CaptureState.isShot)
+                                CaptureState.audio = !CaptureState.audio;
                         }
                     })
 
@@ -136,14 +117,14 @@ Scope {
                 MouseArea {
                     anchors.fill: parent
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-                    enabled: captureState.captureArea !== "region"
-                    onClicked: captureService.closeAll()
+                    enabled: CaptureState.captureArea !== "region"
+                    onClicked: CaptureService.closeAll()
                     z: 0
                 }
 
                 HoverHandler {
                     acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                    onPointChanged: captureService.activeScreen = windowRoot.modelData
+                    onPointChanged: CaptureService.activeScreen = windowRoot.modelData
                 }
 
                 RegionSelector {
@@ -160,14 +141,14 @@ Scope {
 
     PanelWindow {
         id: uiOverlay
-        screen: captureService.activeScreen
+        screen: CaptureService.activeScreen
 
         anchors.bottom: true
         anchors.left: true
         anchors.right: true
         implicitHeight: 160
 
-        visible: captureService.windowsVisible
+        visible: CaptureService.windowsVisible
         color: "transparent"
 
         WlrLayershell.layer: WlrLayer.Overlay
@@ -179,17 +160,17 @@ Scope {
             anchors.fill: parent
 
             Rectangle {
-                visible: castState.showCastAlert
+                visible: CastState.showCastAlert
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: 40
                 width: toastRow.implicitWidth + 24
                 height: 44
                 radius: 22
-                color: captureState.pillBackground
+                color: CaptureState.pillBackground
                 border.color: Config.recAccent
                 border.width: 1
-                opacity: castState.showCastAlert ? 1.0 : 0.0
+                opacity: CastState.showCastAlert ? 1.0 : 0.0
                 z: 10
                 Behavior on opacity {
                     NumberAnimation {
@@ -208,7 +189,7 @@ Scope {
                         radius: 4
                         color: Config.recAccent
                         SequentialAnimation on opacity {
-                            running: castState.showCastAlert
+                            running: CastState.showCastAlert
                             loops: Animation.Infinite
                             NumberAnimation {
                                 to: 0.3
@@ -234,20 +215,20 @@ Scope {
 
             Rectangle {
                 id: pullTab
-                visible: !castState.showCastAlert && !castState.isTransitioningToCast && captureState.captureArea === "region"
+                visible: !CastState.showCastAlert && !CastState.isTransitioningToCast && CaptureState.captureArea === "region"
                 z: 11
                 width: 48
                 height: 24
                 radius: 12
-                color: captureState.pillBackground
+                color: CaptureState.pillBackground
                 border.color: Config.borderColor
                 border.width: 1
 
                 x: (parent.width - width) / 2
-                y: selectionState.isEditing ? parent.height + 10 : (captureState.toolbarCollapsed ? parent.height - 24 : parent.height - toolbar.idleH - 40 - height + 12)
+                y: SelectionState.isEditing ? parent.height + 10 : (CaptureState.toolbarCollapsed ? parent.height - 24 : parent.height - toolbar.idleH - 40 - height + 12)
 
                 Behavior on y {
-                    enabled: captureService.isLoaded
+                    enabled: CaptureService.isLoaded
                     NumberAnimation {
                         duration: 300
                         easing.type: Easing.OutCubic
@@ -256,8 +237,8 @@ Scope {
 
                 Icon {
                     anchors.centerIn: parent
-                    anchors.verticalCenterOffset: captureState.toolbarCollapsed ? 0 : -2
-                    name: captureState.toolbarCollapsed ? "chevron-up" : "chevron-down"
+                    anchors.verticalCenterOffset: CaptureState.toolbarCollapsed ? 0 : -2
+                    name: CaptureState.toolbarCollapsed ? "chevron-up" : "chevron-down"
                     size: 16
                     color: Config.textMuted
                 }
@@ -265,68 +246,68 @@ Scope {
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: captureState.toolbarCollapsed = !captureState.toolbarCollapsed
+                    onClicked: CaptureState.toolbarCollapsed = !CaptureState.toolbarCollapsed
                 }
             }
 
             Rectangle {
                 id: toolbar
-                visible: !castState.showCastAlert
+                visible: !CastState.showCastAlert
                 clip: true
                 z: 10
 
                 readonly property real idleW: mainRow.implicitWidth + 32
                 readonly property real idleH: 56
 
-                x: castState.isTransitioningToCast ? parent.width - 6 - 12 : (parent.width - width) / 2
-                width: castState.isTransitioningToCast ? 6 : idleW
-                height: castState.isTransitioningToCast ? 44 : idleH
-                radius: castState.isTransitioningToCast ? 3 : idleH / 2
+                x: CastState.isTransitioningToCast ? parent.width - 6 - 12 : (parent.width - width) / 2
+                width: CastState.isTransitioningToCast ? 6 : idleW
+                height: CastState.isTransitioningToCast ? 44 : idleH
+                radius: CastState.isTransitioningToCast ? 3 : idleH / 2
 
-                y: selectionState.isEditing ? parent.height + 10 : (captureState.toolbarCollapsed && captureState.captureArea === "region" ? parent.height + 10 : parent.height - idleH - 40)
+                y: SelectionState.isEditing ? parent.height + 10 : (CaptureState.toolbarCollapsed && CaptureState.captureArea === "region" ? parent.height + 10 : parent.height - idleH - 40)
 
-                color: captureState.pillBackground
-                border.color: castState.isTransitioningToCast ? Config.recAccent : Config.borderColor
+                color: CaptureState.pillBackground
+                border.color: CastState.isTransitioningToCast ? Config.recAccent : Config.borderColor
                 border.width: 1
-                opacity: castState.isTransitioningToCast ? 0.0 : (selectionState.isEditing ? 0.0 : 1.0)
+                opacity: CastState.isTransitioningToCast ? 0.0 : (SelectionState.isEditing ? 0.0 : 1.0)
 
                 Behavior on y {
-                    enabled: captureService.isLoaded
+                    enabled: CaptureService.isLoaded
                     NumberAnimation {
                         duration: 300
                         easing.type: Easing.OutCubic
                     }
                 }
                 Behavior on opacity {
-                    enabled: captureService.isLoaded
+                    enabled: CaptureService.isLoaded
                     NumberAnimation {
                         duration: 250
                         easing.type: Easing.OutCubic
                     }
                 }
                 Behavior on width {
-                    enabled: castState.isTransitioningToCast
+                    enabled: CastState.isTransitioningToCast
                     NumberAnimation {
                         duration: 400
                         easing.type: Easing.InOutCubic
                     }
                 }
                 Behavior on height {
-                    enabled: castState.isTransitioningToCast
+                    enabled: CastState.isTransitioningToCast
                     NumberAnimation {
                         duration: 400
                         easing.type: Easing.InOutCubic
                     }
                 }
                 Behavior on x {
-                    enabled: castState.isTransitioningToCast
+                    enabled: CastState.isTransitioningToCast
                     NumberAnimation {
                         duration: 400
                         easing.type: Easing.InOutCubic
                     }
                 }
                 Behavior on radius {
-                    enabled: castState.isTransitioningToCast
+                    enabled: CastState.isTransitioningToCast
                     NumberAnimation {
                         duration: 400
                         easing.type: Easing.InOutCubic
@@ -344,15 +325,15 @@ Scope {
 
                     IconButton {
                         iconName: "camera"
-                        isActive: captureState.isShot
+                        isActive: CaptureState.isShot
                         activeAccent: Config.ssAccent
-                        onClicked: captureState.isShot = true
+                        onClicked: CaptureState.isShot = true
                     }
                     IconButton {
                         iconName: "video"
-                        isActive: !captureState.isShot
+                        isActive: !CaptureState.isShot
                         activeAccent: Config.recAccent
-                        onClicked: captureState.isShot = false
+                        onClicked: CaptureState.isShot = false
                     }
 
                     VDivider {}
@@ -360,14 +341,14 @@ Scope {
                     Rectangle {
                         id: regionBtn
                         implicitHeight: 36
-                        Layout.preferredWidth: (captureState.captureArea === "region" && selectionState.rectWidth > selectionState.minimumSize) ? regionBtnRow.implicitWidth + 16 : 36
+                        Layout.preferredWidth: (CaptureState.captureArea === "region" && SelectionState.rectWidth > SelectionState.minimumSize) ? regionBtnRow.implicitWidth + 16 : 36
                         radius: 18
-                        color: captureState.captureArea === "region" ? Qt.rgba(captureState.accentColor.r, captureState.accentColor.g, captureState.accentColor.b, 0.15) : "transparent"
-                        border.width: captureState.captureArea === "region" ? 1 : 0
-                        border.color: captureState.accentColor
+                        color: CaptureState.captureArea === "region" ? Qt.rgba(CaptureState.accentColor.r, CaptureState.accentColor.g, CaptureState.accentColor.b, 0.15) : "transparent"
+                        border.width: CaptureState.captureArea === "region" ? 1 : 0
+                        border.color: CaptureState.accentColor
 
                         Behavior on Layout.preferredWidth {
-                            enabled: captureService.isLoaded
+                            enabled: CaptureService.isLoaded
                             NumberAnimation {
                                 duration: 350
                                 easing.type: Easing.OutCubic
@@ -382,23 +363,23 @@ Scope {
                             Icon {
                                 name: "crop"
                                 size: 20
-                                color: captureState.captureArea === "region" ? captureState.accentColor : Config.textMuted
+                                color: CaptureState.captureArea === "region" ? CaptureState.accentColor : Config.textMuted
                             }
 
                             Text {
-                                visible: captureState.captureArea === "region" && selectionState.rectWidth > selectionState.minimumSize
-                                text: Math.round(selectionState.rectWidth) + " × " + Math.round(selectionState.rectHeight)
+                                visible: CaptureState.captureArea === "region" && SelectionState.rectWidth > SelectionState.minimumSize
+                                text: Math.round(SelectionState.rectWidth) + " × " + Math.round(SelectionState.rectHeight)
                                 font.pixelSize: 10
                                 font.weight: Font.DemiBold
-                                color: captureState.accentColor
+                                color: CaptureState.accentColor
                                 Layout.rightMargin: 2
                             }
 
                             Icon {
-                                visible: captureState.captureArea === "region" && selectionState.rectWidth > selectionState.minimumSize
+                                visible: CaptureState.captureArea === "region" && SelectionState.rectWidth > SelectionState.minimumSize
                                 name: "restore"
                                 size: 12
-                                color: captureState.accentColor
+                                color: CaptureState.accentColor
                                 opacity: 0.7
                                 Layout.rightMargin: 2
                             }
@@ -408,9 +389,9 @@ Scope {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                captureState.captureArea = "region";
-                                if (selectionState.rectWidth > selectionState.minimumSize) {
-                                    selectionState.clear();
+                                CaptureState.captureArea = "region";
+                                if (SelectionState.rectWidth > SelectionState.minimumSize) {
+                                    SelectionState.clear();
                                 }
                             }
                         }
@@ -418,40 +399,40 @@ Scope {
 
                     IconButton {
                         iconName: "app-window"
-                        isActive: captureState.captureArea === "window"
-                        isEnabled: captureState.isShot
-                        activeAccent: captureState.accentColor
-                        onClicked: captureState.captureArea = "window"
+                        isActive: CaptureState.captureArea === "window"
+                        isEnabled: CaptureState.isShot
+                        activeAccent: CaptureState.accentColor
+                        onClicked: CaptureState.captureArea = "window"
                     }
                     IconButton {
                         iconName: "device-desktop"
-                        isActive: captureState.captureArea === "screen"
-                        activeAccent: captureState.accentColor
-                        onClicked: captureState.captureArea = "screen"
+                        isActive: CaptureState.captureArea === "screen"
+                        activeAccent: CaptureState.accentColor
+                        onClicked: CaptureState.captureArea = "screen"
                     }
 
                     VDivider {}
 
                     IconButton {
-                        iconName: captureState.isShot ? (captureState.pointer ? "pointer" : "pointer-off") : (captureState.mic ? "microphone" : "microphone-off")
-                        isActive: captureState.isShot ? captureState.pointer : captureState.mic
-                        activeAccent: captureState.accentColor
-                        onClicked: captureState.isShot ? (captureState.pointer = !captureState.pointer) : (captureState.mic = !captureState.mic)
+                        iconName: CaptureState.isShot ? (CaptureState.pointer ? "pointer" : "pointer-off") : (CaptureState.mic ? "microphone" : "microphone-off")
+                        isActive: CaptureState.isShot ? CaptureState.pointer : CaptureState.mic
+                        activeAccent: CaptureState.accentColor
+                        onClicked: CaptureState.isShot ? (CaptureState.pointer = !CaptureState.pointer) : (CaptureState.mic = !CaptureState.mic)
                     }
                     IconButton {
-                        iconName: captureState.isShot ? (captureState.annotate ? "pencil" : "pencil-off") : (captureState.audio ? "volume" : "volume-3")
-                        isActive: captureState.isShot ? captureState.annotate : captureState.audio
-                        activeAccent: captureState.accentColor
-                        onClicked: captureState.isShot ? (captureState.annotate = !captureState.annotate) : (captureState.audio = !captureState.audio)
+                        iconName: CaptureState.isShot ? (CaptureState.annotate ? "pencil" : "pencil-off") : (CaptureState.audio ? "volume" : "volume-3")
+                        isActive: CaptureState.isShot ? CaptureState.annotate : CaptureState.audio
+                        activeAccent: CaptureState.accentColor
+                        onClicked: CaptureState.isShot ? (CaptureState.annotate = !CaptureState.annotate) : (CaptureState.audio = !CaptureState.audio)
                     }
 
                     VDivider {}
 
                     IconButton {
                         isPrimary: true
-                        iconName: captureState.captureArea === "region" && selectionState.rectWidth <= selectionState.minimumSize ? "crop" : captureState.isShot ? "camera-up" : "player-record"
-                        activeAccent: captureState.accentColor
-                        onClicked: captureService.executeAction()
+                        iconName: CaptureState.captureArea === "region" && SelectionState.rectWidth <= SelectionState.minimumSize ? "crop" : CaptureState.isShot ? "camera-up" : "player-record"
+                        activeAccent: CaptureState.accentColor
+                        onClicked: CaptureService.executeAction()
                     }
                 }
             }
@@ -460,11 +441,11 @@ Scope {
 
     PanelWindow {
         id: recordingIndicator
-        screen: captureService.activeScreen
+        screen: CaptureService.activeScreen
 
         anchors.bottom: true
         anchors.right: true
-        visible: castState.isCasting && !castState.isTransitioningToCast
+        visible: CastState.isCasting && !CastState.isTransitioningToCast
         color: "transparent"
 
         implicitWidth: 240
@@ -487,7 +468,7 @@ Scope {
                 width: pillHover.containsMouse ? 150 : 6
                 height: 44
                 radius: pillHover.containsMouse ? 22 : 3
-                color: captureState.pillBackground
+                color: CaptureState.pillBackground
                 border.width: 1
                 border.color: Config.recAccent
                 clip: true
@@ -525,7 +506,7 @@ Scope {
                         color: Config.recAccent
                         Layout.leftMargin: 16
                         SequentialAnimation on opacity {
-                            running: pillHover.containsMouse && castState.isCasting
+                            running: pillHover.containsMouse && CastState.isCasting
                             loops: Animation.Infinite
                             NumberAnimation {
                                 to: 0.3
@@ -542,7 +523,7 @@ Scope {
 
                     Text {
                         Layout.fillWidth: true
-                        text: castState.formatTime(castState.castSeconds)
+                        text: CastState.formatTime(CastState.castSeconds)
                         color: Config.textColor
                         font.pixelSize: 13
                         font.weight: Font.DemiBold
@@ -576,7 +557,7 @@ Scope {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: castState.stopCast()
+                    onClicked: CastState.stopCast()
                 }
             }
         }

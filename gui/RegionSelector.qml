@@ -1,20 +1,21 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Window
+import "services"
 
 Item {
     id: root
 
-    visible: captureState.captureArea === "region"
+    visible: CaptureState.captureArea === "region"
 
     property real scaleFactor: 1.0
     property real screenOffsetX: 0
     property real screenOffsetY: 0
 
-    readonly property real localRectX: (selectionState.rectX - screenOffsetX) / scaleFactor
-    readonly property real localRectY: (selectionState.rectY - screenOffsetY) / scaleFactor
-    readonly property real localRectWidth: selectionState.rectWidth / scaleFactor
-    readonly property real localRectHeight: selectionState.rectHeight / scaleFactor
+    readonly property real localRectX: (SelectionState.rectX - screenOffsetX) / scaleFactor
+    readonly property real localRectY: (SelectionState.rectY - screenOffsetY) / scaleFactor
+    readonly property real localRectWidth: SelectionState.rectWidth / scaleFactor
+    readonly property real localRectHeight: SelectionState.rectHeight / scaleFactor
 
     readonly property color overlayColor: Qt.rgba(Config.overlayColor.r, Config.overlayColor.g, Config.overlayColor.b, Config.overlayAlpha)
     readonly property color dimLabelColor: Qt.rgba(Config.dimLabelBg.r, Config.dimLabelBg.g, Config.dimLabelBg.b, Config.dimLabelAlpha)
@@ -67,7 +68,7 @@ Item {
     readonly property int resizeMinimum: 8
 
     function clampToScreen(globalX, globalY) {
-        if (captureState.isShot)
+        if (CaptureState.isShot)
             return {
                 x: globalX,
                 y: globalY
@@ -87,28 +88,28 @@ Item {
             x: 0
             y: 0
             width: parent.width
-            height: selectionState.hasSelection ? Math.max(0, localRectY) : parent.height
+            height: SelectionState.hasSelection ? Math.max(0, localRectY) : parent.height
             color: overlayColor
         }
         Rectangle {
             x: 0
-            y: selectionState.hasSelection ? Math.max(0, localRectY + localRectHeight) : parent.height
+            y: SelectionState.hasSelection ? Math.max(0, localRectY + localRectHeight) : parent.height
             width: parent.width
-            height: selectionState.hasSelection ? Math.max(0, parent.height - y) : 0
+            height: SelectionState.hasSelection ? Math.max(0, parent.height - y) : 0
             color: overlayColor
         }
         Rectangle {
             x: 0
             y: Math.max(0, localRectY)
-            width: selectionState.hasSelection ? Math.max(0, localRectX) : 0
-            height: selectionState.hasSelection ? Math.max(0, Math.min(parent.height, localRectY + localRectHeight) - y) : 0
+            width: SelectionState.hasSelection ? Math.max(0, localRectX) : 0
+            height: SelectionState.hasSelection ? Math.max(0, Math.min(parent.height, localRectY + localRectHeight) - y) : 0
             color: overlayColor
         }
         Rectangle {
-            x: selectionState.hasSelection ? Math.max(0, localRectX + localRectWidth) : parent.width
+            x: SelectionState.hasSelection ? Math.max(0, localRectX + localRectWidth) : parent.width
             y: Math.max(0, localRectY)
-            width: selectionState.hasSelection ? Math.max(0, parent.width - x) : 0
-            height: selectionState.hasSelection ? Math.max(0, Math.min(parent.height, localRectY + localRectHeight) - y) : 0
+            width: SelectionState.hasSelection ? Math.max(0, parent.width - x) : 0
+            height: SelectionState.hasSelection ? Math.max(0, Math.min(parent.height, localRectY + localRectHeight) - y) : 0
             color: overlayColor
         }
     }
@@ -118,7 +119,7 @@ Item {
         y: localRectY
         width: localRectWidth
         height: localRectHeight
-        visible: selectionState.hasSelection
+        visible: SelectionState.hasSelection
         color: "transparent"
         border.width: 2
         border.color: Config.ssAccent
@@ -126,7 +127,7 @@ Item {
     }
 
     Rectangle {
-        visible: selectionState.hasSelection
+        visible: SelectionState.hasSelection
         x: Math.min(Math.max(localRectX + 8, 8), parent.width - width - 8)
         y: localRectY > 38 ? localRectY - 32 : localRectY + localRectHeight + 8
         width: dimText.implicitWidth + 16
@@ -138,7 +139,7 @@ Item {
         Text {
             id: dimText
             anchors.centerIn: parent
-            text: Math.round(selectionState.rectWidth) + " × " + Math.round(selectionState.rectHeight) + " px"
+            text: Math.round(SelectionState.rectWidth) + " × " + Math.round(SelectionState.rectHeight) + " px"
             font.pixelSize: 12
             font.weight: Font.DemiBold
             color: Config.handleColor
@@ -149,7 +150,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         anchors.topMargin: 20
-        text: selectionState.hasSelection ? "Drag to move  ·  Corners to resize  ·  Enter to confirm  ·  Esc to cancel" : "Drag to select  ·  Esc to cancel"
+        text: SelectionState.hasSelection ? "Drag to move  ·  Corners to resize  ·  Enter to confirm  ·  Esc to cancel" : "Drag to select  ·  Esc to cancel"
         font.pixelSize: 11
         color: instructionColor
         z: 10
@@ -170,7 +171,7 @@ Item {
             width: handleSize
             height: handleSize
             radius: handleSize / 2
-            visible: selectionState.hasSelection && !selectionState.isDrawing
+            visible: SelectionState.hasSelection && !SelectionState.isDrawing
             color: Config.handleColor
             border.width: 2
             border.color: Config.ssAccent
@@ -185,24 +186,24 @@ Item {
                 hoverEnabled: true
 
                 onPressed: mouse => {
-                    selectionState.isResizing = true;
-                    selectionState.activeHandle = index;
+                    SelectionState.isResizing = true;
+                    SelectionState.activeHandle = index;
                     const offset = resizeOffsets[index];
-                    selectionState.resizeAnchorX = selectionState.rectX + offset.x * selectionState.rectWidth;
-                    selectionState.resizeAnchorY = selectionState.rectY + offset.y * selectionState.rectHeight;
-                    selectionState.isEditing = true;
+                    SelectionState.resizeAnchorX = SelectionState.rectX + offset.x * SelectionState.rectWidth;
+                    SelectionState.resizeAnchorY = SelectionState.rectY + offset.y * SelectionState.rectHeight;
+                    SelectionState.isEditing = true;
                 }
 
                 onPositionChanged: mouse => {
-                    if (!selectionState.isResizing || selectionState.activeHandle !== index)
+                    if (!SelectionState.isResizing || SelectionState.activeHandle !== index)
                         return;
                     const pt = mapToItem(root, mouse.x, mouse.y);
                     const clamped = clampToScreen((pt.x * scaleFactor) + screenOffsetX, (pt.y * scaleFactor) + screenOffsetY);
                     let ptGlobalX = clamped.x;
                     let ptGlobalY = clamped.y;
 
-                    const ax = selectionState.resizeAnchorX;
-                    const ay = selectionState.resizeAnchorY;
+                    const ax = SelectionState.resizeAnchorX;
+                    const ay = SelectionState.resizeAnchorY;
 
                     const nx = Math.min(ptGlobalX, ax);
                     const ny = Math.min(ptGlobalY, ay);
@@ -210,17 +211,17 @@ Item {
                     const nh = Math.abs(ptGlobalY - ay);
 
                     if (nw >= resizeMinimum && nh >= resizeMinimum) {
-                        selectionState.rectX = nx;
-                        selectionState.rectY = ny;
-                        selectionState.rectWidth = nw;
-                        selectionState.rectHeight = nh;
+                        SelectionState.rectX = nx;
+                        SelectionState.rectY = ny;
+                        SelectionState.rectWidth = nw;
+                        SelectionState.rectHeight = nh;
                     }
                 }
 
                 onReleased: {
-                    selectionState.isResizing = false;
-                    selectionState.activeHandle = -1;
-                    selectionState.isEditing = false;
+                    SelectionState.isResizing = false;
+                    SelectionState.activeHandle = -1;
+                    SelectionState.isEditing = false;
                 }
             }
         }
@@ -233,11 +234,11 @@ Item {
         z: 3
 
         cursorShape: {
-            if (selectionState.isDrawing)
+            if (SelectionState.isDrawing)
                 return Qt.CrossCursor;
-            if (selectionState.isMoving)
+            if (SelectionState.isMoving)
                 return Qt.ClosedHandCursor;
-            if (selectionState.hasSelection && mouseX >= localRectX && mouseX <= localRectX + localRectWidth && mouseY >= localRectY && mouseY <= localRectY + localRectHeight) {
+            if (SelectionState.hasSelection && mouseX >= localRectX && mouseX <= localRectX + localRectWidth && mouseY >= localRectY && mouseY <= localRectY + localRectHeight) {
                 return Qt.OpenHandCursor;
             }
             return Qt.CrossCursor;
@@ -245,37 +246,37 @@ Item {
 
         onClicked: mouse => {
             if (mouse.button === Qt.RightButton) {
-                if (selectionState.hasSelection) {
-                    selectionState.clear();
+                if (SelectionState.hasSelection) {
+                    SelectionState.clear();
                 } else {
-                    captureService.closeAll();
+                    CaptureService.closeAll();
                 }
             }
         }
 
         onPressed: mouse => {
-            if (mouse.button !== Qt.LeftButton || selectionState.isResizing)
+            if (mouse.button !== Qt.LeftButton || SelectionState.isResizing)
                 return;
             const currentGlobal = clampToScreen((mouse.x * scaleFactor) + screenOffsetX, (mouse.y * scaleFactor) + screenOffsetY);
 
-            const inSel = selectionState.hasSelection && currentGlobal.x >= selectionState.rectX && currentGlobal.x <= selectionState.rectX + selectionState.rectWidth && currentGlobal.y >= selectionState.rectY && currentGlobal.y <= selectionState.rectY + selectionState.rectHeight;
+            const inSel = SelectionState.hasSelection && currentGlobal.x >= SelectionState.rectX && currentGlobal.x <= SelectionState.rectX + SelectionState.rectWidth && currentGlobal.y >= SelectionState.rectY && currentGlobal.y <= SelectionState.rectY + SelectionState.rectHeight;
 
             if (inSel) {
-                selectionState.isMoving = true;
-                selectionState.moveOriginX = selectionState.rectX;
-                selectionState.moveOriginY = selectionState.rectY;
-                selectionState.moveGrabX = currentGlobal.x;
-                selectionState.moveGrabY = currentGlobal.y;
-                selectionState.isEditing = true;
+                SelectionState.isMoving = true;
+                SelectionState.moveOriginX = SelectionState.rectX;
+                SelectionState.moveOriginY = SelectionState.rectY;
+                SelectionState.moveGrabX = currentGlobal.x;
+                SelectionState.moveGrabY = currentGlobal.y;
+                SelectionState.isEditing = true;
             } else {
-                selectionState.isDrawing = true;
-                selectionState.drawOriginX = currentGlobal.x;
-                selectionState.drawOriginY = currentGlobal.y;
-                selectionState.rectX = currentGlobal.x;
-                selectionState.rectY = currentGlobal.y;
-                selectionState.rectWidth = 0;
-                selectionState.rectHeight = 0;
-                selectionState.isEditing = true;
+                SelectionState.isDrawing = true;
+                SelectionState.drawOriginX = currentGlobal.x;
+                SelectionState.drawOriginY = currentGlobal.y;
+                SelectionState.rectX = currentGlobal.x;
+                SelectionState.rectY = currentGlobal.y;
+                SelectionState.rectWidth = 0;
+                SelectionState.rectHeight = 0;
+                SelectionState.isEditing = true;
             }
         }
 
@@ -284,35 +285,35 @@ Item {
             let currentGlobalX = currentGlobal.x;
             let currentGlobalY = currentGlobal.y;
 
-            if (selectionState.isDrawing) {
-                selectionState.rectX = Math.min(currentGlobalX, selectionState.drawOriginX);
-                selectionState.rectY = Math.min(currentGlobalY, selectionState.drawOriginY);
-                selectionState.rectWidth = Math.abs(currentGlobalX - selectionState.drawOriginX);
-                selectionState.rectHeight = Math.abs(currentGlobalY - selectionState.drawOriginY);
+            if (SelectionState.isDrawing) {
+                SelectionState.rectX = Math.min(currentGlobalX, SelectionState.drawOriginX);
+                SelectionState.rectY = Math.min(currentGlobalY, SelectionState.drawOriginY);
+                SelectionState.rectWidth = Math.abs(currentGlobalX - SelectionState.drawOriginX);
+                SelectionState.rectHeight = Math.abs(currentGlobalY - SelectionState.drawOriginY);
                 return;
             }
 
-            if (selectionState.isMoving) {
-                const dx = currentGlobalX - selectionState.moveGrabX;
-                const dy = currentGlobalY - selectionState.moveGrabY;
+            if (SelectionState.isMoving) {
+                const dx = currentGlobalX - SelectionState.moveGrabX;
+                const dy = currentGlobalY - SelectionState.moveGrabY;
 
-                if (!captureState.isShot) {
-                    const maxX = screenOffsetX + (root.width * scaleFactor) - selectionState.rectWidth;
-                    const maxY = screenOffsetY + (root.height * scaleFactor) - selectionState.rectHeight;
-                    selectionState.rectX = Math.max(screenOffsetX, Math.min(selectionState.moveOriginX + dx, maxX));
-                    selectionState.rectY = Math.max(screenOffsetY, Math.min(selectionState.moveOriginY + dy, maxY));
+                if (!CaptureState.isShot) {
+                    const maxX = screenOffsetX + (root.width * scaleFactor) - SelectionState.rectWidth;
+                    const maxY = screenOffsetY + (root.height * scaleFactor) - SelectionState.rectHeight;
+                    SelectionState.rectX = Math.max(screenOffsetX, Math.min(SelectionState.moveOriginX + dx, maxX));
+                    SelectionState.rectY = Math.max(screenOffsetY, Math.min(SelectionState.moveOriginY + dy, maxY));
                 } else {
-                    selectionState.rectX = selectionState.moveOriginX + dx;
-                    selectionState.rectY = selectionState.moveOriginY + dy;
+                    SelectionState.rectX = SelectionState.moveOriginX + dx;
+                    SelectionState.rectY = SelectionState.moveOriginY + dy;
                 }
             }
         }
 
         onReleased: mouse => {
             if (mouse.button === Qt.LeftButton) {
-                selectionState.isDrawing = false;
-                selectionState.isMoving = false;
-                selectionState.isEditing = false;
+                SelectionState.isDrawing = false;
+                SelectionState.isMoving = false;
+                SelectionState.isEditing = false;
             }
         }
     }

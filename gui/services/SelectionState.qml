@@ -1,8 +1,8 @@
-pragma ComponentBehavior: Bound
+pragma Singleton
 import QtQuick
 import Quickshell
 
-Scope {
+Singleton {
     id: root
 
     property real rectX: 0

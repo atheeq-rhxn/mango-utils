@@ -1,9 +1,10 @@
-pragma ComponentBehavior: Bound
+pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs
 
-Scope {
+Singleton {
     id: root
 
     property bool isCasting: false
@@ -45,12 +46,12 @@ Scope {
         repeat: false
         onTriggered: {
             isTransitioningToCast = false;
-            freezeState.exit();
-            const a = captureService.buildArgs("cast", false);
+            FreezeState.exit();
+            const a = CaptureService.buildArgs("cast", false);
             a.push("--toggle");
             Quickshell.execDetached(a);
             isCasting = true;
-            captureService.windowsVisible = false;
+            CaptureService.windowsVisible = false;
         }
     }
 
@@ -67,7 +68,7 @@ Scope {
         onLoadFailed: {
             if (isCasting) {
                 isCasting = false;
-                if (!captureService.windowsVisible)
+                if (!CaptureService.windowsVisible)
                     quitTimer.start();
             }
         }
@@ -86,7 +87,7 @@ Scope {
         repeat: false
         onTriggered: {
             showCastAlert = false;
-            captureService.windowsVisible = false;
+            CaptureService.windowsVisible = false;
         }
     }
 
@@ -102,7 +103,7 @@ Scope {
             return;
         Quickshell.execDetached([Config.msnapPath, "cast", "--toggle"]);
         isCasting = false;
-        if (!captureService.windowsVisible)
+        if (!CaptureService.windowsVisible)
             quitTimer.start();
     }
 
