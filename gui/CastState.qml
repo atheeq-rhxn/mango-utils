@@ -45,7 +45,7 @@ Scope {
         repeat: false
         onTriggered: {
             isTransitioningToCast = false;
-            globalState.exitFreeze();
+            freezeState.exit();
             const a = globalState.buildArgs("cast", false);
             a.push("--toggle");
             Quickshell.execDetached(a);

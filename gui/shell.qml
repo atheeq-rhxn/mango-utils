@@ -19,6 +19,10 @@ Scope {
         id: castState
     }
 
+    FreezeState {
+        id: freezeState
+    }
+
     property bool isLoaded: false
     property bool isShot: true
     property string captureMode: "region"
@@ -28,8 +32,6 @@ Scope {
     property bool optAnnotate: false
     property bool optMic: false
     property bool optAudio: false
-
-    property string freezeState: "idle"
 
     property bool windowsVisible: true
 
@@ -62,30 +64,7 @@ Scope {
     Component.onCompleted: {
         globalState.isLoaded = true;
         if (isShot)
-            enterFreeze();
-    }
-
-    Process {
-        id: wayfreezeProcess
-
-        command: ["wayfreeze", "--enable-keyboard", "--hide-cursor", "--after-freeze-cmd", "echo frozen"]
-
-        running: false
-
-        stdout: SplitParser {
-            onRead: data => {
-                if (data.indexOf("frozen") !== -1) {
-                    freezeState = "frozen";
-                    windowsVisible = true;
-                }
-            }
-        }
-
-        onExited: (code, status) => {
-            if (freezeState !== "idle") {
-                freezeState = "idle";
-            }
-        }
+            freezeState.enter();
     }
 
     Process {
@@ -94,38 +73,15 @@ Scope {
         running: false
 
         onExited: (code, status) => {
-            if (wayfreezeProcess.running)
-                wayfreezeProcess.running = false;
-            freezeState = "idle";
+            freezeState.exit();
             windowsVisible = false;
             if (!castState.isCasting)
                 Qt.quit();
         }
     }
 
-    function enterFreeze() {
-        if (freezeState !== "idle")
-            return;
-        if (!Config.freezeEnabled) {
-            freezeState = "frozen";
-            windowsVisible = true;
-            return;
-        }
-        freezeState = "freezing";
-        windowsVisible = false;
-        wayfreezeProcess.running = true;
-    }
-
-    function exitFreeze() {
-        if (wayfreezeProcess.running)
-            wayfreezeProcess.running = false;
-        freezeState = "idle";
-    }
-
     function closeAll() {
-        if (wayfreezeProcess.running)
-            wayfreezeProcess.running = false;
-        freezeState = "idle";
+        freezeState.exit();
         windowsVisible = false;
         if (!castState.isCasting)
             Qt.quit();
