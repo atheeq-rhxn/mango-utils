@@ -47,7 +47,9 @@ install: build
 	
 	# Install GUI Application Files
 	install -d $(GUI_DIR)/icons
+	install -d $(GUI_DIR)/components
 	install -m644 gui/*.qml $(GUI_DIR)/
+	install -m644 gui/components/*.qml $(GUI_DIR)/components/
 	install -m644 Config.qml.build $(GUI_DIR)/Config.qml
 	install -m644 gui/icons/*.svg $(GUI_DIR)/icons/
 	
