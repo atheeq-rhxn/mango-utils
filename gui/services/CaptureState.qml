@@ -32,7 +32,6 @@ Singleton {
             return;
         if (captureArea !== "region") {
             toolbarCollapsed = false;
-            SelectionState.clear();
         }
     }
 }
