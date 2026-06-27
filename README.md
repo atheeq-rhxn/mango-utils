@@ -126,6 +126,15 @@ msnap cast [OPTIONS]   # record the screen
 | `-m`, `--mic` | | Record microphone |
 | `-A`, `--audio-device` | `DEVICE` | System audio device (default: `default_output`) |
 | `-M`, `--mic-device` | `DEVICE` | Microphone device (default: `default_input`) |
+| `-q`, `--quality` | `level` | Video quality: `medium`, `high`, `very_high`, `ultra` (default: `very_high`) |
+| `-k`, `--codec` | `codec` | Video codec: `h264`, `hevc`, `av1`, `vp8`, `vp9` (default: `h264`) |
+| `-F`, `--framerate` | `fps` | Target frame rate (default: `60`) |
+| `-C`, `--audio-codec` | `codec` | Audio codec: `opus`, `aac` (default: `opus`) |
+| `-R`, `--color-range` | `range` | Color range: `limited`, `full` (default: `limited`) |
+| `--no-cursor` | | Hide cursor in recording |
+| `-s`, `--resolution` | `WxH` | Output resolution cap (e.g. `1920x1080`) |
+| `-c`, `--container` | `format` | Container format: `mp4`, `mkv`, `webm` |
+| `-T`, `--tune` | `tune` | Encoding tune: `performance`, `quality` (default: `performance`) |
 | `-o`, `--output` | `DIR` | Output directory |
 | `-f`, `--filename` | `NAME` | Output filename or pattern |
 
@@ -138,6 +147,10 @@ Launch from your application launcher, or directly:
 ```sh
 msnap gui
 ```
+
+| Flag | Description |
+|------|-------------|
+| `--no-freeze` | Skip screen freeze on launch (no `wayfreeze`) |
 
 ### Keyboard shortcuts
 
@@ -198,6 +211,15 @@ Config files live in `$XDG_CONFIG_HOME/msnap/` (default: `~/.config/msnap/`).
 | `shot_pointer_default` | `false` | Include pointer by default |
 | `cast_output_dir` | `$XDG_VIDEOS_DIR/Screencasts` or `~/Videos/Screencasts` | Recording save directory |
 | `cast_filename_pattern` | `%Y%m%d%H%M%S.mp4` | Recording filename pattern |
+| `cast_quality` | `very_high` | Video quality: `medium`, `high`, `very_high`, `ultra` |
+| `cast_codec` | `h264` | Video codec: `h264`, `hevc`, `av1`, `vp8`, `vp9` |
+| `cast_framerate` | `60` | Target frame rate |
+| `cast_audio_codec` | `opus` | Audio codec: `opus`, `aac` |
+| `cast_color_range` | `limited` | Color range: `limited`, `full` |
+| `cast_cursor` | `true` | Show cursor in recording |
+| `cast_resolution` | *(none)* | Output resolution cap (e.g. `1920x1080`) |
+| `cast_container` | *(inferred)* | Container: `mp4`, `mkv`, `webm` |
+| `cast_tune` | `performance` | Encoding tune: `performance`, `quality` |
 
 > **Filename patterns** support standard `date` format tokens (`%Y`, `%m`, `%d`, `%H`, `%M`, `%S`, etc.)
 
