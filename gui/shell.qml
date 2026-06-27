@@ -48,6 +48,8 @@ Scope {
     property int castSeconds: 0
     property int castStartEpoch: 0
 
+    property string freezeState: "idle"
+
     property bool windowsVisible: true
 
     readonly property color accent: isShot ? Config.ssAccent : Config.recAccent
@@ -73,7 +75,10 @@ Scope {
         if (!windowsVisible) cancelEditing()
     }
 
-    Component.onCompleted: globalState.isLoaded = true
+    Component.onCompleted: {
+        globalState.isLoaded = true
+        if (isShot) enterFreeze()
+    }
 
     FileView {
         id: startTimeFile
@@ -108,6 +113,7 @@ Scope {
         repeat: false
         onTriggered: {
             globalState.isTransitioningToCast = false
+            globalState.exitFreeze()
             const a = globalState.buildArgs("cast", false)
             a.push("--toggle")
             Quickshell.execDetached(a)
@@ -151,7 +157,66 @@ Scope {
         }
     }
 
+    Process {
+        id: wayfreezeProcess
+
+        command: [
+            "wayfreeze",
+            "--enable-keyboard",
+            "--hide-cursor",
+            "--after-freeze-cmd",
+            "echo frozen"
+        ]
+
+        running: false
+
+        stdout: SplitParser {
+            onRead: data => {
+                if (data.indexOf("frozen") !== -1) {
+                    freezeState = "frozen"
+                    windowsVisible = true
+                }
+            }
+        }
+
+        onExited: (code, status) => {
+            if (freezeState !== "idle") {
+                freezeState = "idle"
+            }
+        }
+    }
+
+    Process {
+        id: shotProcess
+
+        running: false
+
+        onExited: (code, status) => {
+            if (wayfreezeProcess.running)
+                wayfreezeProcess.running = false
+            freezeState = "idle"
+            windowsVisible = false
+            if (!isCasting) Qt.quit()
+        }
+    }
+
+    function enterFreeze() {
+        if (freezeState !== "idle") return
+        freezeState = "freezing"
+        windowsVisible = false
+        wayfreezeProcess.running = true
+    }
+
+    function exitFreeze() {
+        if (wayfreezeProcess.running)
+            wayfreezeProcess.running = false
+        freezeState = "idle"
+    }
+
     function closeAll() {
+        if (wayfreezeProcess.running)
+            wayfreezeProcess.running = false
+        freezeState = "idle"
         windowsVisible = false
         if (!isCasting) Qt.quit()
     }
@@ -199,8 +264,9 @@ Scope {
     }
 
     function doShot() {
-        Quickshell.execDetached(buildArgs("shot", true))
-        closeAll()
+        windowsVisible = false
+        shotProcess.command = buildArgs("shot", true)
+        shotProcess.running = true
     }
 
     function doCast() {
