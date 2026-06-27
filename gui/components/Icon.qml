@@ -16,10 +16,10 @@ Item {
         anchors.centerIn: parent
         width: root.size
         height: root.size
-        source: "icons/" + root.name + ".svg"
+        source: "../icons/" + root.name + ".svg"
         sourceSize: Qt.size(root.size, root.size)
         smooth: true
-        visible: false  // Hidden - only the effect is visible
+        visible: false
     }
 
     MultiEffect {
