@@ -11,12 +11,12 @@ Item {
     property real screenOffsetX: 0
     property real screenOffsetY: 0
 
-    readonly property real localSelX: (globalState.globalSelX - screenOffsetX) / scaleFactor
-    readonly property real localSelY: (globalState.globalSelY - screenOffsetY) / scaleFactor
-    readonly property real localSelW: globalState.globalSelW / scaleFactor
-    readonly property real localSelH: globalState.globalSelH / scaleFactor
+    readonly property real localSelX: (selectionState.globalSelX - screenOffsetX) / scaleFactor
+    readonly property real localSelY: (selectionState.globalSelY - screenOffsetY) / scaleFactor
+    readonly property real localSelW: selectionState.globalSelW / scaleFactor
+    readonly property real localSelH: selectionState.globalSelH / scaleFactor
 
-    readonly property bool hasSelection: globalState.globalSelW > globalState.minSelectionSize && globalState.globalSelH > globalState.minSelectionSize
+    readonly property bool hasSelection: selectionState.globalSelW > selectionState.minSelectionSize && selectionState.globalSelH > selectionState.minSelectionSize
 
     readonly property color overlayMask: Qt.rgba(Config.overlayColor.r, Config.overlayColor.g, Config.overlayColor.b, Config.overlayAlpha)
     readonly property color dimLabelBg: Qt.rgba(Config.dimLabelBg.r, Config.dimLabelBg.g, Config.dimLabelBg.b, Config.dimLabelAlpha)
@@ -104,7 +104,7 @@ Item {
         Text {
             id: dimText
             anchors.centerIn: parent
-            text: Math.round(globalState.globalSelW) + " × " + Math.round(globalState.globalSelH) + " px"
+            text: Math.round(selectionState.globalSelW) + " × " + Math.round(selectionState.globalSelH) + " px"
             font.pixelSize: 12
             font.weight: Font.DemiBold
             color: Config.handleColor
@@ -136,7 +136,7 @@ Item {
             width: selectorRoot.handleSize
             height: selectorRoot.handleSize
             radius: selectorRoot.handleSize / 2
-            visible: selectorRoot.hasSelection && !globalState.isSelecting
+            visible: selectorRoot.hasSelection && !selectionState.isSelecting
             color: Config.handleColor
             border.width: 2
             border.color: Config.ssAccent
@@ -148,16 +148,16 @@ Item {
                 hoverEnabled: true
 
                 onPressed: mouse => {
-                    globalState.isResizing = true
-                    globalState.activeHandle = index
+                    selectionState.isResizing = true
+                    selectionState.activeHandle = index
                     const offset = selectorRoot.anchorOffsets[index]
-                    globalState.resizeAnchorX = globalState.globalSelX + offset.x * globalState.globalSelW
-                    globalState.resizeAnchorY = globalState.globalSelY + offset.y * globalState.globalSelH
-                    globalState.isActivelyEditing = true
+                    selectionState.resizeAnchorX = selectionState.globalSelX + offset.x * selectionState.globalSelW
+                    selectionState.resizeAnchorY = selectionState.globalSelY + offset.y * selectionState.globalSelH
+                    selectionState.isActivelyEditing = true
                 }
 
                 onPositionChanged: mouse => {
-                    if (!globalState.isResizing || globalState.activeHandle !== index) return
+                    if (!selectionState.isResizing || selectionState.activeHandle !== index) return
 
                     const pt = mapToItem(selectorRoot, mouse.x, mouse.y)
                     const clamped = selectorRoot.clampToScreen(
@@ -167,8 +167,8 @@ Item {
                     let ptGlobalX = clamped.x
                     let ptGlobalY = clamped.y
 
-                    const ax = globalState.resizeAnchorX
-                    const ay = globalState.resizeAnchorY
+                    const ax = selectionState.resizeAnchorX
+                    const ay = selectionState.resizeAnchorY
 
                     const nx = Math.min(ptGlobalX, ax)
                     const ny = Math.min(ptGlobalY, ay)
@@ -176,17 +176,17 @@ Item {
                     const nh = Math.abs(ptGlobalY - ay)
 
                     if (nw >= selectorRoot.minSelectionSize && nh >= selectorRoot.minSelectionSize) {
-                        globalState.globalSelX = nx
-                        globalState.globalSelY = ny
-                        globalState.globalSelW = nw
-                        globalState.globalSelH = nh
+                        selectionState.globalSelX = nx
+                        selectionState.globalSelY = ny
+                        selectionState.globalSelW = nw
+                        selectionState.globalSelH = nh
                     }
                 }
 
                 onReleased: {
-                    globalState.isResizing = false
-                    globalState.activeHandle = -1
-                    globalState.isActivelyEditing = false
+                    selectionState.isResizing = false
+                    selectionState.activeHandle = -1
+                    selectionState.isActivelyEditing = false
                 }
             }
         }
@@ -199,8 +199,8 @@ Item {
         z: 3
 
         cursorShape: {
-            if (globalState.isSelecting) return Qt.CrossCursor
-            if (globalState.isMoving) return Qt.ClosedHandCursor
+            if (selectionState.isSelecting) return Qt.CrossCursor
+            if (selectionState.isMoving) return Qt.ClosedHandCursor
             if (selectorRoot.hasSelection &&
                 mouseX >= selectorRoot.localSelX &&
                 mouseX <= selectorRoot.localSelX + selectorRoot.localSelW &&
@@ -214,7 +214,7 @@ Item {
         onClicked: mouse => {
             if (mouse.button === Qt.RightButton) {
                 if (selectorRoot.hasSelection) {
-                    globalState.clearSelection()
+                    selectionState.clearSelection()
                 } else {
                     globalState.closeAll()
                 }
@@ -222,7 +222,7 @@ Item {
         }
 
         onPressed: mouse => {
-            if (mouse.button !== Qt.LeftButton || globalState.isResizing) return
+            if (mouse.button !== Qt.LeftButton || selectionState.isResizing) return
 
             const currentGlobal = selectorRoot.clampToScreen(
                 (mouse.x * selectorRoot.scaleFactor) + selectorRoot.screenOffsetX,
@@ -230,27 +230,27 @@ Item {
             )
 
             const inSel = selectorRoot.hasSelection &&
-                          currentGlobal.x >= globalState.globalSelX &&
-                          currentGlobal.x <= globalState.globalSelX + globalState.globalSelW &&
-                          currentGlobal.y >= globalState.globalSelY &&
-                          currentGlobal.y <= globalState.globalSelY + globalState.globalSelH
+                          currentGlobal.x >= selectionState.globalSelX &&
+                          currentGlobal.x <= selectionState.globalSelX + selectionState.globalSelW &&
+                          currentGlobal.y >= selectionState.globalSelY &&
+                          currentGlobal.y <= selectionState.globalSelY + selectionState.globalSelH
 
             if (inSel) {
-                globalState.isMoving = true
-                globalState.moveStartSelX = globalState.globalSelX
-                globalState.moveStartSelY = globalState.globalSelY
-                globalState.moveStartMouseX = currentGlobal.x
-                globalState.moveStartMouseY = currentGlobal.y
-                globalState.isActivelyEditing = true
+                selectionState.isMoving = true
+                selectionState.moveStartSelX = selectionState.globalSelX
+                selectionState.moveStartSelY = selectionState.globalSelY
+                selectionState.moveStartMouseX = currentGlobal.x
+                selectionState.moveStartMouseY = currentGlobal.y
+                selectionState.isActivelyEditing = true
             } else {
-                globalState.isSelecting = true
-                globalState.startX = currentGlobal.x
-                globalState.startY = currentGlobal.y
-                globalState.globalSelX = currentGlobal.x
-                globalState.globalSelY = currentGlobal.y
-                globalState.globalSelW = 0
-                globalState.globalSelH = 0
-                globalState.isActivelyEditing = true
+                selectionState.isSelecting = true
+                selectionState.startX = currentGlobal.x
+                selectionState.startY = currentGlobal.y
+                selectionState.globalSelX = currentGlobal.x
+                selectionState.globalSelY = currentGlobal.y
+                selectionState.globalSelW = 0
+                selectionState.globalSelH = 0
+                selectionState.isActivelyEditing = true
             }
         }
 
@@ -262,35 +262,35 @@ Item {
             let currentGlobalX = currentGlobal.x
             let currentGlobalY = currentGlobal.y
 
-            if (globalState.isSelecting) {
-                globalState.globalSelX = Math.min(currentGlobalX, globalState.startX)
-                globalState.globalSelY = Math.min(currentGlobalY, globalState.startY)
-                globalState.globalSelW = Math.abs(currentGlobalX - globalState.startX)
-                globalState.globalSelH = Math.abs(currentGlobalY - globalState.startY)
+            if (selectionState.isSelecting) {
+                selectionState.globalSelX = Math.min(currentGlobalX, selectionState.startX)
+                selectionState.globalSelY = Math.min(currentGlobalY, selectionState.startY)
+                selectionState.globalSelW = Math.abs(currentGlobalX - selectionState.startX)
+                selectionState.globalSelH = Math.abs(currentGlobalY - selectionState.startY)
                 return
             }
 
-            if (globalState.isMoving) {
-                const dx = currentGlobalX - globalState.moveStartMouseX
-                const dy = currentGlobalY - globalState.moveStartMouseY
+            if (selectionState.isMoving) {
+                const dx = currentGlobalX - selectionState.moveStartMouseX
+                const dy = currentGlobalY - selectionState.moveStartMouseY
 
                 if (!globalState.isShot) {
-                    const maxX = selectorRoot.screenOffsetX + (selectorRoot.width * selectorRoot.scaleFactor) - globalState.globalSelW
-                    const maxY = selectorRoot.screenOffsetY + (selectorRoot.height * selectorRoot.scaleFactor) - globalState.globalSelH
-                    globalState.globalSelX = Math.max(selectorRoot.screenOffsetX, Math.min(globalState.moveStartSelX + dx, maxX))
-                    globalState.globalSelY = Math.max(selectorRoot.screenOffsetY, Math.min(globalState.moveStartSelY + dy, maxY))
+                    const maxX = selectorRoot.screenOffsetX + (selectorRoot.width * selectorRoot.scaleFactor) - selectionState.globalSelW
+                    const maxY = selectorRoot.screenOffsetY + (selectorRoot.height * selectorRoot.scaleFactor) - selectionState.globalSelH
+                    selectionState.globalSelX = Math.max(selectorRoot.screenOffsetX, Math.min(selectionState.moveStartSelX + dx, maxX))
+                    selectionState.globalSelY = Math.max(selectorRoot.screenOffsetY, Math.min(selectionState.moveStartSelY + dy, maxY))
                 } else {
-                    globalState.globalSelX = globalState.moveStartSelX + dx
-                    globalState.globalSelY = globalState.moveStartSelY + dy
+                    selectionState.globalSelX = selectionState.moveStartSelX + dx
+                    selectionState.globalSelY = selectionState.moveStartSelY + dy
                 }
             }
         }
 
         onReleased: mouse => {
             if (mouse.button === Qt.LeftButton) {
-                globalState.isSelecting = false
-                globalState.isMoving = false
-                globalState.isActivelyEditing = false
+                selectionState.isSelecting = false
+                selectionState.isMoving = false
+                selectionState.isActivelyEditing = false
             }
         }
     }

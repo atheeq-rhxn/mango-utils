@@ -9,28 +9,9 @@ import Quickshell.Wayland
 Scope {
     id: globalState
 
-    property real globalSelX: 0
-    property real globalSelY: 0
-    property real globalSelW: 0
-    property real globalSelH: 0
-    property real startX: 0
-    property real startY: 0
-
-    property bool isSelecting: false
-    property bool isMoving: false
-    property bool isResizing: false
-    property int activeHandle: -1
-    property real moveStartSelX: 0
-    property real moveStartSelY: 0
-    property real moveStartMouseX: 0
-    property real moveStartMouseY: 0
-    property real resizeAnchorX: 0
-    property real resizeAnchorY: 0
-    property bool isActivelyEditing: false
-
     property var activeScreen: null
 
-    readonly property int minSelectionSize: 4
+    SelectionState { id: selectionState }
 
     property bool isLoaded: false
     property bool isShot: true
@@ -58,8 +39,8 @@ Scope {
     onIsShotChanged: {
         if (!isShot) {
             if (captureMode === "window") captureMode = "region"
-            cancelEditing()
-            clampSelectionToScreen(activeScreen)
+            selectionState.cancelEditing()
+            selectionState.clampSelectionToScreen(activeScreen)
         }
     }
 
@@ -67,12 +48,12 @@ Scope {
         if (!isLoaded) return
         if (captureMode !== "region") {
             isCollapsed = false
-            clearSelection()
+            selectionState.clearSelection()
         }
     }
 
     onWindowsVisibleChanged: {
-        if (!windowsVisible) cancelEditing()
+        if (!windowsVisible) selectionState.cancelEditing()
     }
 
     Component.onCompleted: {
@@ -234,11 +215,11 @@ Scope {
 
     function buildArgs(sub, forShot) {
         const a = [Config.msnapPath, sub]
-        if (captureMode === "region" && globalSelW > minSelectionSize && globalSelH > minSelectionSize) {
-            const rx = Math.round(globalSelX)
-            const ry = Math.round(globalSelY)
-            const rw = Math.round(globalSelW)
-            const rh = Math.round(globalSelH)
+        if (captureMode === "region" && selectionState.globalSelW > selectionState.minSelectionSize && selectionState.globalSelH > selectionState.minSelectionSize) {
+            const rx = Math.round(selectionState.globalSelX)
+            const ry = Math.round(selectionState.globalSelY)
+            const rw = Math.round(selectionState.globalSelW)
+            const rh = Math.round(selectionState.globalSelH)
             a.push("-g", `${rx},${ry} ${rw}x${rh}`)
         } else if (captureMode === "window") {
             a.push("-w")
@@ -255,7 +236,7 @@ Scope {
     }
 
     function executeAction() {
-        if (captureMode === "region" && (globalSelW <= minSelectionSize || globalSelH <= minSelectionSize)) return
+        if (captureMode === "region" && (selectionState.globalSelW <= selectionState.minSelectionSize || selectionState.globalSelH <= selectionState.minSelectionSize)) return
         isShot ? doShot() : doCast()
     }
 
@@ -276,47 +257,6 @@ Scope {
         Quickshell.execDetached([Config.msnapPath, "cast", "--toggle"])
         isCasting = false
         if (!windowsVisible) quitTimer.start()
-    }
-
-    function clearSelection() {
-        globalSelW = 0
-        globalSelH = 0
-        isActivelyEditing = false
-    }
-
-    function cancelEditing() {
-        isSelecting = false
-        isMoving = false
-        isResizing = false
-        isActivelyEditing = false
-        activeHandle = -1
-    }
-
-    function clampSelectionToScreen(screen) {
-        if (!screen || globalSelW <= 0) return
-        const sf = screen.devicePixelRatio || 1.0
-        const sMinX = screen.x
-        const sMinY = screen.y
-        const sMaxX = sMinX + (screen.width * sf)
-        const sMaxY = sMinY + (screen.height * sf)
-
-        if (globalSelX < sMinX) {
-            globalSelW = Math.max(0, globalSelW - (sMinX - globalSelX))
-            globalSelX = sMinX
-        }
-        if (globalSelX + globalSelW > sMaxX) {
-            globalSelW = Math.max(0, sMaxX - globalSelX)
-        }
-        if (globalSelY < sMinY) {
-            globalSelH = Math.max(0, globalSelH - (sMinY - globalSelY))
-            globalSelY = sMinY
-        }
-        if (globalSelY + globalSelH > sMaxY) {
-            globalSelH = Math.max(0, sMaxY - globalSelY)
-        }
-        if (globalSelW <= minSelectionSize || globalSelH <= minSelectionSize) {
-            clearSelection()
-        }
     }
 
     Variants {
@@ -356,8 +296,8 @@ Scope {
                 Keys.onEnterPressed:   globalState.executeAction()
                 Keys.onSpacePressed:   globalState.executeAction()
                 Keys.onEscapePressed: {
-                    if (globalState.captureMode === "region" && globalState.globalSelW > globalState.minSelectionSize) {
-                        globalState.clearSelection()
+                    if (globalState.captureMode === "region" && selectionState.globalSelW > selectionState.minSelectionSize) {
+                        selectionState.clearSelection()
                     } else {
                         globalState.closeAll()
                     }
@@ -524,7 +464,7 @@ Scope {
                 border.width: 1
 
                 x: (parent.width - width) / 2
-                y: globalState.isActivelyEditing
+                y: selectionState.isActivelyEditing
                     ? parent.height + 10
                     : (globalState.isCollapsed
                         ? parent.height - 24
@@ -561,7 +501,7 @@ Scope {
                 height: globalState.isTransitioningToCast ? 44 : idleH
                 radius: globalState.isTransitioningToCast ? 3 : idleH / 2
 
-                y: globalState.isActivelyEditing
+                y: selectionState.isActivelyEditing
                     ? parent.height + 10
                     : (globalState.isCollapsed && globalState.captureMode === "region"
                         ? parent.height + 10
@@ -570,7 +510,7 @@ Scope {
                 color: globalState.pillBg
                 border.color: globalState.isTransitioningToCast ? Config.recAccent : Config.borderColor
                 border.width: 1
-                opacity: globalState.isTransitioningToCast ? 0.0 : (globalState.isActivelyEditing ? 0.0 : 1.0)
+                opacity: globalState.isTransitioningToCast ? 0.0 : (selectionState.isActivelyEditing ? 0.0 : 1.0)
 
                 Behavior on y       { enabled: globalState.isLoaded; NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
                 Behavior on opacity { enabled: globalState.isLoaded; NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
@@ -604,7 +544,7 @@ Scope {
                     Rectangle {
                         id: regionBtn
                         implicitHeight: 36
-                        Layout.preferredWidth: (globalState.captureMode === "region" && globalState.globalSelW > globalState.minSelectionSize) ? regionBtnRow.implicitWidth + 16 : 36
+                        Layout.preferredWidth: (globalState.captureMode === "region" && selectionState.globalSelW > selectionState.minSelectionSize) ? regionBtnRow.implicitWidth + 16 : 36
                         radius: 18
                         color: globalState.captureMode === "region" ? Qt.rgba(globalState.accent.r, globalState.accent.g, globalState.accent.b, 0.15) : "transparent"
                         border.width: globalState.captureMode === "region" ? 1 : 0
@@ -624,8 +564,8 @@ Scope {
                             }
 
                             Text {
-                                visible: globalState.captureMode === "region" && globalState.globalSelW > globalState.minSelectionSize
-                                text: Math.round(globalState.globalSelW) + " × " + Math.round(globalState.globalSelH)
+                                visible: globalState.captureMode === "region" && selectionState.globalSelW > selectionState.minSelectionSize
+                                text: Math.round(selectionState.globalSelW) + " × " + Math.round(selectionState.globalSelH)
                                 font.pixelSize: 10
                                 font.weight: Font.DemiBold
                                 color: globalState.accent
@@ -633,7 +573,7 @@ Scope {
                             }
 
                             Icon {
-                                visible: globalState.captureMode === "region" && globalState.globalSelW > globalState.minSelectionSize
+                                visible: globalState.captureMode === "region" && selectionState.globalSelW > selectionState.minSelectionSize
                                 name: "restore"
                                 size: 12
                                 color: globalState.accent
@@ -647,8 +587,8 @@ Scope {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 globalState.captureMode = "region"
-                                if (globalState.globalSelW > globalState.minSelectionSize) {
-                                    globalState.clearSelection()
+                                if (selectionState.globalSelW > selectionState.minSelectionSize) {
+                                    selectionState.clearSelection()
                                 }
                             }
                         }
@@ -683,7 +623,7 @@ Scope {
 
                     IconButton {
                         isPrimary: true
-                        iconName: globalState.captureMode === "region" && globalState.globalSelW <= globalState.minSelectionSize ? "crop" : globalState.isShot ? "camera-up" : "player-record"
+                        iconName: globalState.captureMode === "region" && selectionState.globalSelW <= selectionState.minSelectionSize ? "crop" : globalState.isShot ? "camera-up" : "player-record"
                         onClicked: globalState.executeAction()
                     }
                 }
