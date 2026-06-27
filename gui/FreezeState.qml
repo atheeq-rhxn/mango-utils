@@ -19,7 +19,7 @@ Scope {
             onRead: data => {
                 if (data.indexOf("frozen") !== -1) {
                     root.state = "frozen";
-                    globalState.windowsVisible = true;
+                    captureService.windowsVisible = true;
                 }
             }
         }
@@ -36,11 +36,11 @@ Scope {
             return;
         if (!Config.freezeEnabled) {
             root.state = "frozen";
-            globalState.windowsVisible = true;
+            captureService.windowsVisible = true;
             return;
         }
         root.state = "freezing";
-        globalState.windowsVisible = false;
+        captureService.windowsVisible = false;
         wayfreezeProcess.running = true;
     }
 

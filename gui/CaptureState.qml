@@ -27,7 +27,7 @@ Scope {
     }
 
     onCaptureAreaChanged: {
-        if (!globalState.isLoaded)
+        if (!captureService.isLoaded)
             return;
         if (captureArea !== "region") {
             toolbarCollapsed = false;

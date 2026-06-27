@@ -7,9 +7,6 @@ import Quickshell.Io
 import Quickshell.Wayland
 
 Scope {
-    id: globalState
-
-    property var activeScreen: null
 
     SelectionState {
         id: selectionState
@@ -31,17 +28,8 @@ Scope {
         id: captureService
     }
 
-    property bool isLoaded: false
-
-    property bool windowsVisible: true
-
-    onWindowsVisibleChanged: {
-        if (!windowsVisible)
-            selectionState.cancelInteraction();
-    }
-
     Component.onCompleted: {
-        globalState.isLoaded = true;
+        captureService.isLoaded = true;
         if (captureState.isShot)
             freezeState.enter();
     }
@@ -57,7 +45,7 @@ Scope {
             anchors.left: true
             anchors.right: true
             anchors.bottom: true
-            visible: globalState.windowsVisible
+            visible: captureService.windowsVisible
             color: "transparent"
 
             WlrLayershell.layer: WlrLayer.Overlay
@@ -154,7 +142,7 @@ Scope {
 
                 HoverHandler {
                     acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                    onPointChanged: globalState.activeScreen = windowRoot.modelData
+                    onPointChanged: captureService.activeScreen = windowRoot.modelData
                 }
 
                 RegionSelector {
@@ -171,14 +159,14 @@ Scope {
 
     PanelWindow {
         id: uiOverlay
-        screen: globalState.activeScreen
+        screen: captureService.activeScreen
 
         anchors.bottom: true
         anchors.left: true
         anchors.right: true
         implicitHeight: 160
 
-        visible: globalState.windowsVisible
+        visible: captureService.windowsVisible
         color: "transparent"
 
         WlrLayershell.layer: WlrLayer.Overlay
@@ -258,7 +246,7 @@ Scope {
                 y: selectionState.isEditing ? parent.height + 10 : (captureState.toolbarCollapsed ? parent.height - 24 : parent.height - toolbar.idleH - 40 - height + 12)
 
                 Behavior on y {
-                    enabled: globalState.isLoaded
+                    enabled: captureService.isLoaded
                     NumberAnimation {
                         duration: 300
                         easing.type: Easing.OutCubic
@@ -302,14 +290,14 @@ Scope {
                 opacity: castState.isTransitioningToCast ? 0.0 : (selectionState.isEditing ? 0.0 : 1.0)
 
                 Behavior on y {
-                    enabled: globalState.isLoaded
+                    enabled: captureService.isLoaded
                     NumberAnimation {
                         duration: 300
                         easing.type: Easing.OutCubic
                     }
                 }
                 Behavior on opacity {
-                    enabled: globalState.isLoaded
+                    enabled: captureService.isLoaded
                     NumberAnimation {
                         duration: 250
                         easing.type: Easing.OutCubic
@@ -378,7 +366,7 @@ Scope {
                         border.color: captureState.accentColor
 
                         Behavior on Layout.preferredWidth {
-                            enabled: globalState.isLoaded
+                            enabled: captureService.isLoaded
                             NumberAnimation {
                                 duration: 350
                                 easing.type: Easing.OutCubic
@@ -506,7 +494,7 @@ Scope {
 
     PanelWindow {
         id: recordingIndicator
-        screen: globalState.activeScreen
+        screen: captureService.activeScreen
 
         anchors.bottom: true
         anchors.right: true

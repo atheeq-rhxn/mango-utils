@@ -6,6 +6,15 @@ import Quickshell.Io
 Scope {
     id: root
 
+    property var activeScreen: null
+    property bool windowsVisible: true
+    property bool isLoaded: false
+
+    onWindowsVisibleChanged: {
+        if (!windowsVisible)
+            selectionState.cancelInteraction();
+    }
+
     Process {
         id: shotProcess
 
@@ -13,7 +22,7 @@ Scope {
 
         onExited: (code, status) => {
             freezeState.exit();
-            globalState.windowsVisible = false;
+            root.windowsVisible = false;
             if (!castState.isCasting)
                 Qt.quit();
         }
@@ -52,14 +61,14 @@ Scope {
     }
 
     function doShot() {
-        globalState.windowsVisible = false;
+        root.windowsVisible = false;
         shotProcess.command = buildArgs("shot", true);
         shotProcess.running = true;
     }
 
     function closeAll() {
         freezeState.exit();
-        globalState.windowsVisible = false;
+        root.windowsVisible = false;
         if (!castState.isCasting)
             Qt.quit();
     }

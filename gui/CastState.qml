@@ -50,7 +50,7 @@ Scope {
             a.push("--toggle");
             Quickshell.execDetached(a);
             isCasting = true;
-            globalState.windowsVisible = false;
+            captureService.windowsVisible = false;
         }
     }
 
@@ -67,7 +67,7 @@ Scope {
         onLoadFailed: {
             if (isCasting) {
                 isCasting = false;
-                if (!globalState.windowsVisible)
+                if (!captureService.windowsVisible)
                     quitTimer.start();
             }
         }
@@ -86,7 +86,7 @@ Scope {
         repeat: false
         onTriggered: {
             showCastAlert = false;
-            globalState.windowsVisible = false;
+            captureService.windowsVisible = false;
         }
     }
 
@@ -102,7 +102,7 @@ Scope {
             return;
         Quickshell.execDetached([Config.msnapPath, "cast", "--toggle"]);
         isCasting = false;
-        if (!globalState.windowsVisible)
+        if (!captureService.windowsVisible)
             quitTimer.start();
     }
 
