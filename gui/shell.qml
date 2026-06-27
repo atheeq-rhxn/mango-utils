@@ -15,6 +15,10 @@ Scope {
         id: selectionState
     }
 
+    CastState {
+        id: castState
+    }
+
     property bool isLoaded: false
     property bool isShot: true
     property string captureMode: "region"
@@ -24,12 +28,6 @@ Scope {
     property bool optAnnotate: false
     property bool optMic: false
     property bool optAudio: false
-
-    property bool isCasting: false
-    property bool isTransitioningToCast: false
-    property bool showCastAlert: false
-    property int castSeconds: 0
-    property int castStartEpoch: 0
 
     property string freezeState: "idle"
 
@@ -67,84 +65,6 @@ Scope {
             enterFreeze();
     }
 
-    FileView {
-        id: startTimeFile
-        path: "/tmp/msnap-cast.starttime"
-        watchChanges: false
-        printErrors: false
-        onLoaded: {
-            const t = parseInt(text().trim(), 10);
-            if (!isNaN(t))
-                globalState.castStartEpoch = t;
-        }
-    }
-
-    Timer {
-        interval: 1000
-        repeat: true
-        running: globalState.isCasting
-        onTriggered: globalState.castSeconds = globalState.castStartEpoch > 0 ? Math.floor(Date.now() / 1000) - globalState.castStartEpoch : globalState.castSeconds + 1
-        onRunningChanged: {
-            if (running) {
-                startTimeFile.reload();
-            } else {
-                globalState.castSeconds = 0;
-                globalState.castStartEpoch = 0;
-            }
-        }
-    }
-
-    Timer {
-        id: castTransitionTimer
-        interval: 400
-        repeat: false
-        onTriggered: {
-            globalState.isTransitioningToCast = false;
-            globalState.exitFreeze();
-            const a = globalState.buildArgs("cast", false);
-            a.push("--toggle");
-            Quickshell.execDetached(a);
-            globalState.isCasting = true;
-            globalState.windowsVisible = false;
-        }
-    }
-
-    FileView {
-        path: Config.pidFilePath
-        watchChanges: true
-        printErrors: false
-        onLoaded: {
-            globalState.isCasting = true;
-            globalState.showCastAlert = true;
-            startTimeFile.reload();
-            castAlertTimer.start();
-        }
-        onLoadFailed: {
-            if (globalState.isCasting) {
-                globalState.isCasting = false;
-                if (!globalState.windowsVisible)
-                    quitTimer.start();
-            }
-        }
-    }
-
-    Timer {
-        id: quitTimer
-        interval: 600
-        repeat: false
-        onTriggered: Qt.quit()
-    }
-
-    Timer {
-        id: castAlertTimer
-        interval: 2000
-        repeat: false
-        onTriggered: {
-            globalState.showCastAlert = false;
-            globalState.windowsVisible = false;
-        }
-    }
-
     Process {
         id: wayfreezeProcess
 
@@ -178,7 +98,7 @@ Scope {
                 wayfreezeProcess.running = false;
             freezeState = "idle";
             windowsVisible = false;
-            if (!isCasting)
+            if (!castState.isCasting)
                 Qt.quit();
         }
     }
@@ -207,14 +127,8 @@ Scope {
             wayfreezeProcess.running = false;
         freezeState = "idle";
         windowsVisible = false;
-        if (!isCasting)
+        if (!castState.isCasting)
             Qt.quit();
-    }
-
-    function formatTime(s) {
-        const m = Math.floor(s / 60);
-        const sec = s % 60;
-        return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec;
     }
 
     function buildArgs(sub, forShot) {
@@ -246,29 +160,13 @@ Scope {
     function executeAction() {
         if (captureMode === "region" && (selectionState.rectWidth <= selectionState.minimumSize || selectionState.rectHeight <= selectionState.minimumSize))
             return;
-        isShot ? doShot() : doCast();
+        isShot ? doShot() : castState.doCast();
     }
 
     function doShot() {
         windowsVisible = false;
         shotProcess.command = buildArgs("shot", true);
         shotProcess.running = true;
-    }
-
-    function doCast() {
-        if (isCasting)
-            return;
-        isTransitioningToCast = true;
-        castTransitionTimer.start();
-    }
-
-    function stopCast() {
-        if (!isCasting)
-            return;
-        Quickshell.execDetached([Config.msnapPath, "cast", "--toggle"]);
-        isCasting = false;
-        if (!windowsVisible)
-            quitTimer.start();
     }
 
     Variants {
@@ -415,7 +313,7 @@ Scope {
             anchors.fill: parent
 
             Rectangle {
-                visible: globalState.showCastAlert
+                visible: castState.showCastAlert
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: 40
@@ -425,7 +323,7 @@ Scope {
                 color: globalState.pillBg
                 border.color: Config.recAccent
                 border.width: 1
-                opacity: globalState.showCastAlert ? 1.0 : 0.0
+                opacity: castState.showCastAlert ? 1.0 : 0.0
                 z: 10
                 Behavior on opacity {
                     NumberAnimation {
@@ -444,7 +342,7 @@ Scope {
                         radius: 4
                         color: Config.recAccent
                         SequentialAnimation on opacity {
-                            running: globalState.showCastAlert
+                            running: castState.showCastAlert
                             loops: Animation.Infinite
                             NumberAnimation {
                                 to: 0.3
@@ -470,7 +368,7 @@ Scope {
 
             Rectangle {
                 id: pullTab
-                visible: !globalState.showCastAlert && !globalState.isTransitioningToCast && globalState.captureMode === "region"
+                visible: !castState.showCastAlert && !castState.isTransitioningToCast && globalState.captureMode === "region"
                 z: 11
                 width: 48
                 height: 24
@@ -507,24 +405,24 @@ Scope {
 
             Rectangle {
                 id: toolbar
-                visible: !globalState.showCastAlert
+                visible: !castState.showCastAlert
                 clip: true
                 z: 10
 
                 readonly property real idleW: mainRow.implicitWidth + 32
                 readonly property real idleH: 56
 
-                x: globalState.isTransitioningToCast ? parent.width - 6 - 12 : (parent.width - width) / 2
-                width: globalState.isTransitioningToCast ? 6 : idleW
-                height: globalState.isTransitioningToCast ? 44 : idleH
-                radius: globalState.isTransitioningToCast ? 3 : idleH / 2
+                x: castState.isTransitioningToCast ? parent.width - 6 - 12 : (parent.width - width) / 2
+                width: castState.isTransitioningToCast ? 6 : idleW
+                height: castState.isTransitioningToCast ? 44 : idleH
+                radius: castState.isTransitioningToCast ? 3 : idleH / 2
 
                 y: selectionState.isEditing ? parent.height + 10 : (globalState.isCollapsed && globalState.captureMode === "region" ? parent.height + 10 : parent.height - idleH - 40)
 
                 color: globalState.pillBg
-                border.color: globalState.isTransitioningToCast ? Config.recAccent : Config.borderColor
+                border.color: castState.isTransitioningToCast ? Config.recAccent : Config.borderColor
                 border.width: 1
-                opacity: globalState.isTransitioningToCast ? 0.0 : (selectionState.isEditing ? 0.0 : 1.0)
+                opacity: castState.isTransitioningToCast ? 0.0 : (selectionState.isEditing ? 0.0 : 1.0)
 
                 Behavior on y {
                     enabled: globalState.isLoaded
@@ -541,28 +439,28 @@ Scope {
                     }
                 }
                 Behavior on width {
-                    enabled: globalState.isTransitioningToCast
+                    enabled: castState.isTransitioningToCast
                     NumberAnimation {
                         duration: 400
                         easing.type: Easing.InOutCubic
                     }
                 }
                 Behavior on height {
-                    enabled: globalState.isTransitioningToCast
+                    enabled: castState.isTransitioningToCast
                     NumberAnimation {
                         duration: 400
                         easing.type: Easing.InOutCubic
                     }
                 }
                 Behavior on x {
-                    enabled: globalState.isTransitioningToCast
+                    enabled: castState.isTransitioningToCast
                     NumberAnimation {
                         duration: 400
                         easing.type: Easing.InOutCubic
                     }
                 }
                 Behavior on radius {
-                    enabled: globalState.isTransitioningToCast
+                    enabled: castState.isTransitioningToCast
                     NumberAnimation {
                         duration: 400
                         easing.type: Easing.InOutCubic
@@ -735,7 +633,7 @@ Scope {
 
         anchors.bottom: true
         anchors.right: true
-        visible: globalState.isCasting && !globalState.isTransitioningToCast
+        visible: castState.isCasting && !castState.isTransitioningToCast
         color: "transparent"
 
         implicitWidth: 240
@@ -796,7 +694,7 @@ Scope {
                         color: Config.recAccent
                         Layout.leftMargin: 16
                         SequentialAnimation on opacity {
-                            running: pillHover.containsMouse && globalState.isCasting
+                            running: pillHover.containsMouse && castState.isCasting
                             loops: Animation.Infinite
                             NumberAnimation {
                                 to: 0.3
@@ -813,7 +711,7 @@ Scope {
 
                     Text {
                         Layout.fillWidth: true
-                        text: globalState.formatTime(globalState.castSeconds)
+                        text: castState.formatTime(castState.castSeconds)
                         color: Config.textColor
                         font.pixelSize: 13
                         font.weight: Font.DemiBold
@@ -847,7 +745,7 @@ Scope {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: globalState.stopCast()
+                    onClicked: castState.stopCast()
                 }
             }
         }
