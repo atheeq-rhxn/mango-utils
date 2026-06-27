@@ -237,15 +237,6 @@ Scope {
             a.push("-g", `${rx},${ry} ${rw}x${rh}`)
         } else if (captureMode === "window") {
             a.push("-w")
-        } else if (captureMode === "screen") {
-            if (globalState.activeScreen) {
-                const scale = globalState.activeScreen.devicePixelRatio || 1.0
-                const sx = Math.round(globalState.activeScreen.x)
-                const sy = Math.round(globalState.activeScreen.y)
-                const sw = Math.round(globalState.activeScreen.width * scale)
-                const sh = Math.round(globalState.activeScreen.height * scale)
-                a.push("-g", `${sx},${sy} ${sw}x${sh}`)
-            }
         }
 
         if (forShot) {

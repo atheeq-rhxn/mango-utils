@@ -18,6 +18,16 @@ build_cmd() {
     geometry="${args[--geometry]}"
   elif [[ ${args[--region]:-} ]]; then
     geometry="$(slurp -d)" || { echo "Error: Failed to select region" >&2; exit 1; }
+  else
+    if ! command -v mmsg >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+      echo "missing dependency: mmsg and jq are required for screen capture" >&2
+      exit 1
+    fi
+    geometry=$(mmsg get all-monitors | jq -r '.monitors[] | select(.active == true) | "\(.x),\(.y) \(.width * .scale | round)x\(.height * .scale | round)"')
+    if [[ -z "$geometry" ]]; then
+      echo "Error: No active monitor found." >&2
+      exit 1
+    fi
   fi
   if command -v gpu-screen-recorder > /dev/null 2>&1; then
     cmd=(gpu-screen-recorder)

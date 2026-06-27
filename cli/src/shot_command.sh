@@ -37,6 +37,17 @@ if [[ ${args[--window]} ]]; then
   cmd+=(-g "$geometry")
 elif [[ ${args[--geometry]} ]]; then
   cmd+=(-g "${args[--geometry]}")
+else
+  if ! command -v mmsg >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+    echo "missing dependency: mmsg and jq are required for screen capture" >&2
+    exit 1
+  fi
+  geometry=$(mmsg get all-monitors | jq -r '.monitors[] | select(.active == true) | "\(.x),\(.y) \(.width * .scale | round)x\(.height * .scale | round)"')
+  if [[ -z "$geometry" ]]; then
+    echo "Error: No active monitor found." >&2
+    exit 1
+  fi
+  cmd+=(-g "$geometry")
 fi
 
 if [[ ${args[--freeze]} ]]; then
