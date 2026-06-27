@@ -948,6 +948,26 @@ msnap_update_command() {
 
   gui_dir=$(grep -m1 '\.qml$' "$manifest" | xargs dirname)
   icon_file=$(grep -m1 'hicolor' "$manifest")
+  desktop_file=$(grep '\.desktop$' "$manifest")
+
+  new_manifest=$(mktemp)
+  echo "$bin_path" >> "$new_manifest"
+  if [[ -d "$src/gui" ]]; then
+    find "$src/gui" -type f ! -name '*.conf' -print0 | sort -z \
+      | while IFS= read -r -d '' f; do
+          echo "${gui_dir}/${f#$src/gui/}"
+        done >> "$new_manifest"
+  fi
+  [[ -n "$desktop_file" ]] && echo "$desktop_file" >> "$new_manifest"
+  echo "$icon_file" >> "$new_manifest"
+
+  while IFS= read -r old_file; do
+    [[ "$old_file" == *.conf ]] && continue
+    if ! grep -qxF "$old_file" "$new_manifest"; then
+      rm -f "$old_file"
+      echo "Removed obsolete: $old_file"
+    fi
+  done < "$manifest"
 
   echo "Installing..."
   while IFS= read -r dest; do
@@ -975,7 +995,8 @@ msnap_update_command() {
           | install -m755 /dev/stdin "$dest" \
           || { echo "Error: Failed to install binary." >&2; exit 1; } ;;
     esac
-  done < "$manifest"
+  done < "$new_manifest"
+  rm -f "$new_manifest"
 
   if [[ "$use_git" == true ]]; then
     echo "msnap updated to commit ${target_version:0:7}."
