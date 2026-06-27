@@ -11,7 +11,9 @@ Scope {
 
     property var activeScreen: null
 
-    SelectionState { id: selectionState }
+    SelectionState {
+        id: selectionState
+    }
 
     property bool isLoaded: false
     property bool isShot: true
@@ -38,27 +40,31 @@ Scope {
 
     onIsShotChanged: {
         if (!isShot) {
-            if (captureMode === "window") captureMode = "region"
-            selectionState.cancelEditing()
-            selectionState.clampSelectionToScreen(activeScreen)
+            if (captureMode === "window")
+                captureMode = "region";
+            selectionState.cancelInteraction();
+            selectionState.clampToScreen(activeScreen);
         }
     }
 
     onCaptureModeChanged: {
-        if (!isLoaded) return
+        if (!isLoaded)
+            return;
         if (captureMode !== "region") {
-            isCollapsed = false
-            selectionState.clearSelection()
+            isCollapsed = false;
+            selectionState.clear();
         }
     }
 
     onWindowsVisibleChanged: {
-        if (!windowsVisible) selectionState.cancelEditing()
+        if (!windowsVisible)
+            selectionState.cancelInteraction();
     }
 
     Component.onCompleted: {
-        globalState.isLoaded = true
-        if (isShot) enterFreeze()
+        globalState.isLoaded = true;
+        if (isShot)
+            enterFreeze();
     }
 
     FileView {
@@ -67,8 +73,9 @@ Scope {
         watchChanges: false
         printErrors: false
         onLoaded: {
-            const t = parseInt(text().trim(), 10)
-            if (!isNaN(t)) globalState.castStartEpoch = t
+            const t = parseInt(text().trim(), 10);
+            if (!isNaN(t))
+                globalState.castStartEpoch = t;
         }
     }
 
@@ -76,14 +83,13 @@ Scope {
         interval: 1000
         repeat: true
         running: globalState.isCasting
-        onTriggered: globalState.castSeconds = globalState.castStartEpoch > 0
-            ? Math.floor(Date.now() / 1000) - globalState.castStartEpoch
-            : globalState.castSeconds + 1
+        onTriggered: globalState.castSeconds = globalState.castStartEpoch > 0 ? Math.floor(Date.now() / 1000) - globalState.castStartEpoch : globalState.castSeconds + 1
         onRunningChanged: {
-            if (running) { startTimeFile.reload() }
-            else {
-                globalState.castSeconds = 0
-                globalState.castStartEpoch = 0
+            if (running) {
+                startTimeFile.reload();
+            } else {
+                globalState.castSeconds = 0;
+                globalState.castStartEpoch = 0;
             }
         }
     }
@@ -93,13 +99,13 @@ Scope {
         interval: 400
         repeat: false
         onTriggered: {
-            globalState.isTransitioningToCast = false
-            globalState.exitFreeze()
-            const a = globalState.buildArgs("cast", false)
-            a.push("--toggle")
-            Quickshell.execDetached(a)
-            globalState.isCasting = true
-            globalState.windowsVisible = false
+            globalState.isTransitioningToCast = false;
+            globalState.exitFreeze();
+            const a = globalState.buildArgs("cast", false);
+            a.push("--toggle");
+            Quickshell.execDetached(a);
+            globalState.isCasting = true;
+            globalState.windowsVisible = false;
         }
     }
 
@@ -108,15 +114,16 @@ Scope {
         watchChanges: true
         printErrors: false
         onLoaded: {
-            globalState.isCasting = true
-            globalState.showCastAlert = true
-            startTimeFile.reload()
-            castAlertTimer.start()
+            globalState.isCasting = true;
+            globalState.showCastAlert = true;
+            startTimeFile.reload();
+            castAlertTimer.start();
         }
         onLoadFailed: {
             if (globalState.isCasting) {
-                globalState.isCasting = false
-                if (!globalState.windowsVisible) quitTimer.start()
+                globalState.isCasting = false;
+                if (!globalState.windowsVisible)
+                    quitTimer.start();
             }
         }
     }
@@ -133,36 +140,30 @@ Scope {
         interval: 2000
         repeat: false
         onTriggered: {
-            globalState.showCastAlert = false
-            globalState.windowsVisible = false
+            globalState.showCastAlert = false;
+            globalState.windowsVisible = false;
         }
     }
 
     Process {
         id: wayfreezeProcess
 
-        command: [
-            "wayfreeze",
-            "--enable-keyboard",
-            "--hide-cursor",
-            "--after-freeze-cmd",
-            "echo frozen"
-        ]
+        command: ["wayfreeze", "--enable-keyboard", "--hide-cursor", "--after-freeze-cmd", "echo frozen"]
 
         running: false
 
         stdout: SplitParser {
             onRead: data => {
                 if (data.indexOf("frozen") !== -1) {
-                    freezeState = "frozen"
-                    windowsVisible = true
+                    freezeState = "frozen";
+                    windowsVisible = true;
                 }
             }
         }
 
         onExited: (code, status) => {
             if (freezeState !== "idle") {
-                freezeState = "idle"
+                freezeState = "idle";
             }
         }
     }
@@ -174,89 +175,100 @@ Scope {
 
         onExited: (code, status) => {
             if (wayfreezeProcess.running)
-                wayfreezeProcess.running = false
-            freezeState = "idle"
-            windowsVisible = false
-            if (!isCasting) Qt.quit()
+                wayfreezeProcess.running = false;
+            freezeState = "idle";
+            windowsVisible = false;
+            if (!isCasting)
+                Qt.quit();
         }
     }
 
     function enterFreeze() {
-        if (freezeState !== "idle") return
+        if (freezeState !== "idle")
+            return;
         if (!Config.freezeEnabled) {
-            freezeState = "frozen"
-            windowsVisible = true
-            return
+            freezeState = "frozen";
+            windowsVisible = true;
+            return;
         }
-        freezeState = "freezing"
-        windowsVisible = false
-        wayfreezeProcess.running = true
+        freezeState = "freezing";
+        windowsVisible = false;
+        wayfreezeProcess.running = true;
     }
 
     function exitFreeze() {
         if (wayfreezeProcess.running)
-            wayfreezeProcess.running = false
-        freezeState = "idle"
+            wayfreezeProcess.running = false;
+        freezeState = "idle";
     }
 
     function closeAll() {
         if (wayfreezeProcess.running)
-            wayfreezeProcess.running = false
-        freezeState = "idle"
-        windowsVisible = false
-        if (!isCasting) Qt.quit()
+            wayfreezeProcess.running = false;
+        freezeState = "idle";
+        windowsVisible = false;
+        if (!isCasting)
+            Qt.quit();
     }
 
     function formatTime(s) {
-        const m = Math.floor(s / 60)
-        const sec = s % 60
-        return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec;
     }
 
     function buildArgs(sub, forShot) {
-        const a = [Config.msnapPath, sub]
-        if (captureMode === "region" && selectionState.globalSelW > selectionState.minSelectionSize && selectionState.globalSelH > selectionState.minSelectionSize) {
-            const rx = Math.round(selectionState.globalSelX)
-            const ry = Math.round(selectionState.globalSelY)
-            const rw = Math.round(selectionState.globalSelW)
-            const rh = Math.round(selectionState.globalSelH)
-            a.push("-g", `${rx},${ry} ${rw}x${rh}`)
+        const a = [Config.msnapPath, sub];
+        if (captureMode === "region" && selectionState.rectWidth > selectionState.minimumSize && selectionState.rectHeight > selectionState.minimumSize) {
+            const rx = Math.round(selectionState.rectX);
+            const ry = Math.round(selectionState.rectY);
+            const rw = Math.round(selectionState.rectWidth);
+            const rh = Math.round(selectionState.rectHeight);
+            a.push("-g", `${rx},${ry} ${rw}x${rh}`);
         } else if (captureMode === "window") {
-            a.push("-w")
+            a.push("-w");
         }
 
         if (forShot) {
-            if (optPointer) a.push("-p")
-            if (optAnnotate) a.push("-a")
+            if (optPointer)
+                a.push("-p");
+            if (optAnnotate)
+                a.push("-a");
         } else {
-            if (optMic) a.push("-m")
-            if (optAudio) a.push("-a")
+            if (optMic)
+                a.push("-m");
+            if (optAudio)
+                a.push("-a");
         }
-        return a
+        return a;
     }
 
     function executeAction() {
-        if (captureMode === "region" && (selectionState.globalSelW <= selectionState.minSelectionSize || selectionState.globalSelH <= selectionState.minSelectionSize)) return
-        isShot ? doShot() : doCast()
+        if (captureMode === "region" && (selectionState.rectWidth <= selectionState.minimumSize || selectionState.rectHeight <= selectionState.minimumSize))
+            return;
+        isShot ? doShot() : doCast();
     }
 
     function doShot() {
-        windowsVisible = false
-        shotProcess.command = buildArgs("shot", true)
-        shotProcess.running = true
+        windowsVisible = false;
+        shotProcess.command = buildArgs("shot", true);
+        shotProcess.running = true;
     }
 
     function doCast() {
-        if (isCasting) return
-        isTransitioningToCast = true
-        castTransitionTimer.start()
+        if (isCasting)
+            return;
+        isTransitioningToCast = true;
+        castTransitionTimer.start();
     }
 
     function stopCast() {
-        if (!isCasting) return
-        Quickshell.execDetached([Config.msnapPath, "cast", "--toggle"])
-        isCasting = false
-        if (!windowsVisible) quitTimer.start()
+        if (!isCasting)
+            return;
+        Quickshell.execDetached([Config.msnapPath, "cast", "--toggle"]);
+        isCasting = false;
+        if (!windowsVisible)
+            quitTimer.start();
     }
 
     Variants {
@@ -282,50 +294,78 @@ Scope {
                 anchors.fill: parent
                 focus: true
                 Component.onCompleted: forceActiveFocus()
-                onVisibleChanged: if (visible) forceActiveFocus()
+                onVisibleChanged: if (visible)
+                    forceActiveFocus()
 
                 function cycleTarget(dir) {
-                    const modes = globalState.isShot ? ["region", "window", "screen"] : ["region", "screen"]
-                    const i = modes.indexOf(globalState.captureMode)
-                    globalState.captureMode = modes[((i < 0 ? 0 : i) + dir + modes.length) % modes.length]
+                    const modes = globalState.isShot ? ["region", "window", "screen"] : ["region", "screen"];
+                    const i = modes.indexOf(globalState.captureMode);
+                    globalState.captureMode = modes[((i < 0 ? 0 : i) + dir + modes.length) % modes.length];
                 }
 
-                Keys.onTabPressed:     globalState.isShot = !globalState.isShot
+                Keys.onTabPressed: globalState.isShot = !globalState.isShot
                 Keys.onBacktabPressed: globalState.isShot = !globalState.isShot
-                Keys.onReturnPressed:  globalState.executeAction()
-                Keys.onEnterPressed:   globalState.executeAction()
-                Keys.onSpacePressed:   globalState.executeAction()
+                Keys.onReturnPressed: globalState.executeAction()
+                Keys.onEnterPressed: globalState.executeAction()
+                Keys.onSpacePressed: globalState.executeAction()
                 Keys.onEscapePressed: {
-                    if (globalState.captureMode === "region" && selectionState.globalSelW > selectionState.minSelectionSize) {
-                        selectionState.clearSelection()
+                    if (globalState.captureMode === "region" && selectionState.rectWidth > selectionState.minimumSize) {
+                        selectionState.clear();
                     } else {
-                        globalState.closeAll()
+                        globalState.closeAll();
                     }
                 }
 
                 readonly property var keyHandlers: ({
-                    [Qt.Key_H]:     () => cycleTarget(-1),
-                    [Qt.Key_J]:     () => { globalState.isShot = !globalState.isShot },
-                    [Qt.Key_K]:     () => { globalState.isShot = !globalState.isShot },
-                    [Qt.Key_L]:     () => cycleTarget(1),
-                    [Qt.Key_Left]:  () => cycleTarget(-1),
-                    [Qt.Key_Right]: () => cycleTarget(1),
-                    [Qt.Key_S]:     () => { globalState.isShot = true },
-                    [Qt.Key_V]:     () => { globalState.isShot = false },
-                    [Qt.Key_R]:     () => { globalState.captureMode = "region" },
-                    [Qt.Key_W]:     () => { if (globalState.isShot) globalState.captureMode = "window" },
-                    [Qt.Key_F]:     () => { globalState.captureMode = "screen" },
-                    [Qt.Key_P]:     () => { if (globalState.isShot)  globalState.optPointer  = !globalState.optPointer },
-                    [Qt.Key_E]:     () => { if (globalState.isShot)  globalState.optAnnotate = !globalState.optAnnotate },
-                    [Qt.Key_M]:     () => { if (!globalState.isShot) globalState.optMic      = !globalState.optMic },
-                    [Qt.Key_A]:     () => { if (!globalState.isShot) globalState.optAudio    = !globalState.optAudio },
-                })
+                        [Qt.Key_H]: () => cycleTarget(-1),
+                        [Qt.Key_J]: () => {
+                            globalState.isShot = !globalState.isShot;
+                        },
+                        [Qt.Key_K]: () => {
+                            globalState.isShot = !globalState.isShot;
+                        },
+                        [Qt.Key_L]: () => cycleTarget(1),
+                        [Qt.Key_Left]: () => cycleTarget(-1),
+                        [Qt.Key_Right]: () => cycleTarget(1),
+                        [Qt.Key_S]: () => {
+                            globalState.isShot = true;
+                        },
+                        [Qt.Key_V]: () => {
+                            globalState.isShot = false;
+                        },
+                        [Qt.Key_R]: () => {
+                            globalState.captureMode = "region";
+                        },
+                        [Qt.Key_W]: () => {
+                            if (globalState.isShot)
+                                globalState.captureMode = "window";
+                        },
+                        [Qt.Key_F]: () => {
+                            globalState.captureMode = "screen";
+                        },
+                        [Qt.Key_P]: () => {
+                            if (globalState.isShot)
+                                globalState.optPointer = !globalState.optPointer;
+                        },
+                        [Qt.Key_E]: () => {
+                            if (globalState.isShot)
+                                globalState.optAnnotate = !globalState.optAnnotate;
+                        },
+                        [Qt.Key_M]: () => {
+                            if (!globalState.isShot)
+                                globalState.optMic = !globalState.optMic;
+                        },
+                        [Qt.Key_A]: () => {
+                            if (!globalState.isShot)
+                                globalState.optAudio = !globalState.optAudio;
+                        }
+                    })
 
                 Keys.onPressed: event => {
-                    const fn = keyHandlers[event.key]
+                    const fn = keyHandlers[event.key];
                     if (fn) {
-                        fn()
-                        event.accepted = true
+                        fn();
+                        event.accepted = true;
                     }
                 }
 
@@ -371,46 +411,6 @@ Scope {
         WlrLayershell.namespace: "msnap-ui"
         WlrLayershell.exclusionMode: ExclusionMode.Ignore
 
-        component IconButton: Rectangle {
-            property string iconName: ""
-            property bool isActive: false
-            property bool isEnabled: true
-            property bool isPrimary: false
-            property color activeAccent: globalState.accent
-            signal clicked
-
-            width: isPrimary ? 44 : 36
-            height: isPrimary ? 44 : 36
-            radius: height / 2
-            opacity: isEnabled ? 1.0 : 0.3
-            color: isPrimary ? activeAccent : (isActive ? Qt.rgba(activeAccent.r, activeAccent.g, activeAccent.b, 0.15) : "transparent")
-            border.width: isActive && !isPrimary ? 1 : 0
-            border.color: activeAccent
-
-            Icon {
-                anchors.centerIn: parent
-                name: parent.iconName
-                color: parent.isPrimary ? Config.bgColor : (parent.isActive ? parent.activeAccent : Config.textMuted)
-                size: parent.isPrimary ? 22 : 20
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                enabled: parent.isEnabled
-                cursorShape: parent.isEnabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                onClicked: parent.clicked()
-            }
-        }
-
-        component VDivider: Rectangle {
-            width: 1
-            height: 24
-            color: Config.borderColor
-            Layout.alignment: Qt.AlignVCenter
-            Layout.leftMargin: 2
-            Layout.rightMargin: 2
-        }
-
         Item {
             anchors.fill: parent
 
@@ -427,7 +427,11 @@ Scope {
                 border.width: 1
                 opacity: globalState.showCastAlert ? 1.0 : 0.0
                 z: 10
-                Behavior on opacity { NumberAnimation { duration: 200 } }
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 200
+                    }
+                }
 
                 RowLayout {
                     id: toastRow
@@ -435,11 +439,23 @@ Scope {
                     spacing: 8
 
                     Rectangle {
-                        implicitWidth: 8; implicitHeight: 8; radius: 4; color: Config.recAccent
+                        implicitWidth: 8
+                        implicitHeight: 8
+                        radius: 4
+                        color: Config.recAccent
                         SequentialAnimation on opacity {
-                            running: globalState.showCastAlert; loops: Animation.Infinite
-                            NumberAnimation { to: 0.3; duration: 700; easing.type: Easing.InOutSine }
-                            NumberAnimation { to: 1.0; duration: 700; easing.type: Easing.InOutSine }
+                            running: globalState.showCastAlert
+                            loops: Animation.Infinite
+                            NumberAnimation {
+                                to: 0.3
+                                duration: 700
+                                easing.type: Easing.InOutSine
+                            }
+                            NumberAnimation {
+                                to: 1.0
+                                duration: 700
+                                easing.type: Easing.InOutSine
+                            }
                         }
                     }
 
@@ -464,13 +480,15 @@ Scope {
                 border.width: 1
 
                 x: (parent.width - width) / 2
-                y: selectionState.isActivelyEditing
-                    ? parent.height + 10
-                    : (globalState.isCollapsed
-                        ? parent.height - 24
-                        : parent.height - toolbar.idleH - 40 - height + 12)
+                y: selectionState.isEditing ? parent.height + 10 : (globalState.isCollapsed ? parent.height - 24 : parent.height - toolbar.idleH - 40 - height + 12)
 
-                Behavior on y { enabled: globalState.isLoaded; NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
+                Behavior on y {
+                    enabled: globalState.isLoaded
+                    NumberAnimation {
+                        duration: 300
+                        easing.type: Easing.OutCubic
+                    }
+                }
 
                 Icon {
                     anchors.centerIn: parent
@@ -501,25 +519,59 @@ Scope {
                 height: globalState.isTransitioningToCast ? 44 : idleH
                 radius: globalState.isTransitioningToCast ? 3 : idleH / 2
 
-                y: selectionState.isActivelyEditing
-                    ? parent.height + 10
-                    : (globalState.isCollapsed && globalState.captureMode === "region"
-                        ? parent.height + 10
-                        : parent.height - idleH - 40)
+                y: selectionState.isEditing ? parent.height + 10 : (globalState.isCollapsed && globalState.captureMode === "region" ? parent.height + 10 : parent.height - idleH - 40)
 
                 color: globalState.pillBg
                 border.color: globalState.isTransitioningToCast ? Config.recAccent : Config.borderColor
                 border.width: 1
-                opacity: globalState.isTransitioningToCast ? 0.0 : (selectionState.isActivelyEditing ? 0.0 : 1.0)
+                opacity: globalState.isTransitioningToCast ? 0.0 : (selectionState.isEditing ? 0.0 : 1.0)
 
-                Behavior on y       { enabled: globalState.isLoaded; NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
-                Behavior on opacity { enabled: globalState.isLoaded; NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
-                Behavior on width   { enabled: globalState.isTransitioningToCast; NumberAnimation { duration: 400; easing.type: Easing.InOutCubic } }
-                Behavior on height  { enabled: globalState.isTransitioningToCast; NumberAnimation { duration: 400; easing.type: Easing.InOutCubic } }
-                Behavior on x       { enabled: globalState.isTransitioningToCast; NumberAnimation { duration: 400; easing.type: Easing.InOutCubic } }
-                Behavior on radius  { enabled: globalState.isTransitioningToCast; NumberAnimation { duration: 400; easing.type: Easing.InOutCubic } }
+                Behavior on y {
+                    enabled: globalState.isLoaded
+                    NumberAnimation {
+                        duration: 300
+                        easing.type: Easing.OutCubic
+                    }
+                }
+                Behavior on opacity {
+                    enabled: globalState.isLoaded
+                    NumberAnimation {
+                        duration: 250
+                        easing.type: Easing.OutCubic
+                    }
+                }
+                Behavior on width {
+                    enabled: globalState.isTransitioningToCast
+                    NumberAnimation {
+                        duration: 400
+                        easing.type: Easing.InOutCubic
+                    }
+                }
+                Behavior on height {
+                    enabled: globalState.isTransitioningToCast
+                    NumberAnimation {
+                        duration: 400
+                        easing.type: Easing.InOutCubic
+                    }
+                }
+                Behavior on x {
+                    enabled: globalState.isTransitioningToCast
+                    NumberAnimation {
+                        duration: 400
+                        easing.type: Easing.InOutCubic
+                    }
+                }
+                Behavior on radius {
+                    enabled: globalState.isTransitioningToCast
+                    NumberAnimation {
+                        duration: 400
+                        easing.type: Easing.InOutCubic
+                    }
+                }
 
-                MouseArea { anchors.fill: parent }
+                MouseArea {
+                    anchors.fill: parent
+                }
 
                 RowLayout {
                     id: mainRow
@@ -544,13 +596,19 @@ Scope {
                     Rectangle {
                         id: regionBtn
                         implicitHeight: 36
-                        Layout.preferredWidth: (globalState.captureMode === "region" && selectionState.globalSelW > selectionState.minSelectionSize) ? regionBtnRow.implicitWidth + 16 : 36
+                        Layout.preferredWidth: (globalState.captureMode === "region" && selectionState.rectWidth > selectionState.minimumSize) ? regionBtnRow.implicitWidth + 16 : 36
                         radius: 18
                         color: globalState.captureMode === "region" ? Qt.rgba(globalState.accent.r, globalState.accent.g, globalState.accent.b, 0.15) : "transparent"
                         border.width: globalState.captureMode === "region" ? 1 : 0
                         border.color: globalState.accent
 
-                        Behavior on Layout.preferredWidth { enabled: globalState.isLoaded; NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
+                        Behavior on Layout.preferredWidth {
+                            enabled: globalState.isLoaded
+                            NumberAnimation {
+                                duration: 350
+                                easing.type: Easing.OutCubic
+                            }
+                        }
 
                         RowLayout {
                             id: regionBtnRow
@@ -564,8 +622,8 @@ Scope {
                             }
 
                             Text {
-                                visible: globalState.captureMode === "region" && selectionState.globalSelW > selectionState.minSelectionSize
-                                text: Math.round(selectionState.globalSelW) + " × " + Math.round(selectionState.globalSelH)
+                                visible: globalState.captureMode === "region" && selectionState.rectWidth > selectionState.minimumSize
+                                text: Math.round(selectionState.rectWidth) + " × " + Math.round(selectionState.rectHeight)
                                 font.pixelSize: 10
                                 font.weight: Font.DemiBold
                                 color: globalState.accent
@@ -573,7 +631,7 @@ Scope {
                             }
 
                             Icon {
-                                visible: globalState.captureMode === "region" && selectionState.globalSelW > selectionState.minSelectionSize
+                                visible: globalState.captureMode === "region" && selectionState.rectWidth > selectionState.minimumSize
                                 name: "restore"
                                 size: 12
                                 color: globalState.accent
@@ -586,9 +644,9 @@ Scope {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                globalState.captureMode = "region"
-                                if (selectionState.globalSelW > selectionState.minSelectionSize) {
-                                    selectionState.clearSelection()
+                                globalState.captureMode = "region";
+                                if (selectionState.rectWidth > selectionState.minimumSize) {
+                                    selectionState.clear();
                                 }
                             }
                         }
@@ -623,12 +681,52 @@ Scope {
 
                     IconButton {
                         isPrimary: true
-                        iconName: globalState.captureMode === "region" && selectionState.globalSelW <= selectionState.minSelectionSize ? "crop" : globalState.isShot ? "camera-up" : "player-record"
+                        iconName: globalState.captureMode === "region" && selectionState.rectWidth <= selectionState.minimumSize ? "crop" : globalState.isShot ? "camera-up" : "player-record"
                         onClicked: globalState.executeAction()
                     }
                 }
             }
         }
+    }
+
+    component IconButton: Rectangle {
+        property string iconName: ""
+        property bool isActive: false
+        property bool isEnabled: true
+        property bool isPrimary: false
+        property color activeAccent: globalState.accent
+        signal clicked
+
+        width: isPrimary ? 44 : 36
+        height: isPrimary ? 44 : 36
+        radius: height / 2
+        opacity: isEnabled ? 1.0 : 0.3
+        color: isPrimary ? activeAccent : (isActive ? Qt.rgba(activeAccent.r, activeAccent.g, activeAccent.b, 0.15) : "transparent")
+        border.width: isActive && !isPrimary ? 1 : 0
+        border.color: activeAccent
+
+        Icon {
+            anchors.centerIn: parent
+            name: parent.iconName
+            color: parent.isPrimary ? Config.bgColor : (parent.isActive ? parent.activeAccent : Config.textMuted)
+            size: parent.isPrimary ? 22 : 20
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            enabled: parent.isEnabled
+            cursorShape: parent.isEnabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+            onClicked: parent.clicked()
+        }
+    }
+
+    component VDivider: Rectangle {
+        width: 1
+        height: 24
+        color: Config.borderColor
+        Layout.alignment: Qt.AlignVCenter
+        Layout.leftMargin: 2
+        Layout.rightMargin: 2
     }
 
     PanelWindow {
@@ -665,8 +763,18 @@ Scope {
                 border.color: Config.recAccent
                 clip: true
 
-                Behavior on width  { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
-                Behavior on radius { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                Behavior on width {
+                    NumberAnimation {
+                        duration: 250
+                        easing.type: Easing.OutCubic
+                    }
+                }
+                Behavior on radius {
+                    NumberAnimation {
+                        duration: 250
+                        easing.type: Easing.OutCubic
+                    }
+                }
 
                 RowLayout {
                     anchors.right: parent.right
@@ -675,15 +783,31 @@ Scope {
                     width: 150
                     spacing: 12
                     opacity: pillHover.containsMouse ? 1.0 : 0.0
-                    Behavior on opacity { NumberAnimation { duration: 200 } }
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: 200
+                        }
+                    }
 
                     Rectangle {
-                        implicitWidth: 10; implicitHeight: 10; radius: 5; color: Config.recAccent; Layout.leftMargin: 16
+                        implicitWidth: 10
+                        implicitHeight: 10
+                        radius: 5
+                        color: Config.recAccent
+                        Layout.leftMargin: 16
                         SequentialAnimation on opacity {
                             running: pillHover.containsMouse && globalState.isCasting
                             loops: Animation.Infinite
-                            NumberAnimation { to: 0.3; duration: 800; easing.type: Easing.InOutSine }
-                            NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutSine }
+                            NumberAnimation {
+                                to: 0.3
+                                duration: 800
+                                easing.type: Easing.InOutSine
+                            }
+                            NumberAnimation {
+                                to: 1.0
+                                duration: 800
+                                easing.type: Easing.InOutSine
+                            }
                         }
                     }
 
@@ -697,11 +821,24 @@ Scope {
                         horizontalAlignment: Text.AlignHCenter
                     }
 
-                    Rectangle { implicitWidth: 1; implicitHeight: 16; color: Config.borderColor }
+                    Rectangle {
+                        implicitWidth: 1
+                        implicitHeight: 16
+                        color: Config.borderColor
+                    }
 
                     Rectangle {
-                        implicitWidth: 32; implicitHeight: 32; radius: 16; color: "transparent"; Layout.rightMargin: 8
-                        Icon { anchors.centerIn: parent; name: "player-stop"; color: Config.recAccent; size: 16 }
+                        implicitWidth: 32
+                        implicitHeight: 32
+                        radius: 16
+                        color: "transparent"
+                        Layout.rightMargin: 8
+                        Icon {
+                            anchors.centerIn: parent
+                            name: "player-stop"
+                            color: Config.recAccent
+                            size: 16
+                        }
                     }
                 }
 
