@@ -38,8 +38,12 @@ while IFS= read -r dest; do
     fi
   fi
 done < "$manifest"
-rm -f "$manifest"
 echo "Removed $removed file(s)."
+
+while IFS= read -r dest; do
+  dir=$(dirname "$dest")
+  find "$dir" -type d -empty -delete 2>/dev/null || true
+done < <(sort -u "$manifest")
 
 rm -f "$manifest" && echo "Removed manifest: $manifest" || echo "Failed to remove manifest: $manifest" >&2
 
