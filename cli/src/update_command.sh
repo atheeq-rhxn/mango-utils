@@ -137,6 +137,10 @@ while IFS= read -r dest; do
   esac
 done < "$new_manifest"
 
+if [[ -n "$gui_dir" ]]; then
+  find "$(dirname "$gui_dir")" -mindepth 1 -type d -empty -delete 2>/dev/null || true
+fi
+
 # Preserve config file paths in manifest (not updated by this script)
 while IFS= read -r old_file; do
   [[ "$old_file" == *.conf ]] && echo "$old_file" >> "$new_manifest"
