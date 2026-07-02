@@ -125,6 +125,7 @@ while IFS= read -r dest; do
         | install -m644 /dev/stdin "$dest" \
         || { echo "Warning: Failed to install Config.qml." >&2; ((failed++)) || true; continue; } ;;
     */msnap/*)
+      mkdir -p "$(dirname "$dest")"
       install -m644 "${src}/${dest#*/msnap/}" "$dest" \
         || { echo "Warning: Failed to install $(basename "$dest")." >&2; ((failed++)) || true; continue; } ;;
     *)
