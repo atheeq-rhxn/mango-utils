@@ -844,11 +844,19 @@ msnap_uninstall_command() {
   failed=0
   while IFS= read -r dest; do
     if [[ -f "$dest" ]]; then
-      rm -f "$dest" && ((removed++)) || ((failed++))
+      if rm -f "$dest"; then
+        ((removed++)) || true
+      else
+        ((failed++)) || true
+      fi
     fi
   done < "$manifest"
-  rm -f "$manifest"
   echo "Removed $removed file(s)."
+
+  while IFS= read -r dest; do
+    dir=$(dirname "$dest")
+    find "$dir" -type d -empty -delete 2>/dev/null || true
+  done < <(sort -u "$manifest")
 
   rm -f "$manifest" && echo "Removed manifest: $manifest" || echo "Failed to remove manifest: $manifest" >&2
 
@@ -987,6 +995,7 @@ msnap_update_command() {
           | install -m644 /dev/stdin "$dest" \
           || { echo "Warning: Failed to install Config.qml." >&2; ((failed++)) || true; continue; } ;;
       */msnap/*)
+        mkdir -p "$(dirname "$dest")"
         install -m644 "${src}/${dest#*/msnap/}" "$dest" \
           || { echo "Warning: Failed to install $(basename "$dest")." >&2; ((failed++)) || true; continue; } ;;
       *)
@@ -997,6 +1006,10 @@ msnap_update_command() {
           || { echo "Error: Failed to install binary." >&2; exit 1; } ;;
     esac
   done < "$new_manifest"
+
+  if [[ -n "$gui_dir" ]]; then
+    find "$(dirname "$gui_dir")" -mindepth 1 -type d -empty -delete 2>/dev/null || true
+  fi
 
   # Preserve config file paths in manifest (not updated by this script)
   while IFS= read -r old_file; do
@@ -1934,7 +1947,7 @@ msnap_update_parse_requirements() {
 
 # :command.initialize
 initialize() {
-  declare -g version="0.4.0"
+  declare -g version="0.4.1"
   set -e
 
   # src/initialize.sh
