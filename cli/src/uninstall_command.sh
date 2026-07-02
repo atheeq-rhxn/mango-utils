@@ -31,7 +31,11 @@ removed=0
 failed=0
 while IFS= read -r dest; do
   if [[ -f "$dest" ]]; then
-    rm -f "$dest" && ((removed++)) || ((failed++))
+    if rm -f "$dest"; then
+      ((removed++)) || true
+    else
+      ((failed++)) || true
+    fi
   fi
 done < "$manifest"
 rm -f "$manifest"
