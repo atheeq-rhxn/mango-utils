@@ -35,10 +35,15 @@ commands:
   - long: --annotate
     short: -a
     help: Annotate the screenshot with Satty
+  - long: --toplevel
+    short: -t
+    arg: identifier
+    help: Capture window by foreign toplevel identifier
+    conflicts: [--region, --geometry, --window]
   - long: --window
     short: -w
     help: Capture screenshot of the active window
-    conflicts: [--region, --geometry]
+    conflicts: [--region, --geometry, --toplevel]
   - long: --no-copy
     short: -n
     help: Skip copying screenshot to clipboard

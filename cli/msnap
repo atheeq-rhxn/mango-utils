@@ -97,9 +97,15 @@ msnap_shot_usage() {
     echo
 
     # :flag.usage
+    printf "  %s\n" "--toplevel, -t IDENTIFIER"
+    printf "    Capture window by foreign toplevel identifier\n"
+    printf "    %s\n" "Conflicts: --region, --geometry, --window"
+    echo
+
+    # :flag.usage
     printf "  %s\n" "--window, -w"
     printf "    Capture screenshot of the active window\n"
-    printf "    %s\n" "Conflicts: --region, --geometry"
+    printf "    %s\n" "Conflicts: --region, --geometry, --toplevel"
     echo
 
     # :flag.usage
@@ -573,7 +579,9 @@ msnap_shot_command() {
   { [[ ${ini[shot_pointer_default]} == true ]] || [[ ${args[--pointer]} ]]; } && use_pointer=true
   [[ $use_pointer ]] && cmd+=(-c)
 
-  if [[ ${args[--window]} ]]; then
+  if [[ ${args[--toplevel]} ]]; then
+    cmd+=(-T "${args[--toplevel]}")
+  elif [[ ${args[--window]} ]]; then
     if ! command -v mmsg >/dev/null 2>&1; then
       echo "missing dependency: mmsg (required for --window)" >&2
       exit 1
@@ -1283,9 +1291,30 @@ msnap_shot_parse_requirements() {
         ;;
 
       # :flag.case
+      --toplevel | -t)
+        # :flag.conflicts
+        for conflict in --region --geometry --window; do
+          if [[ -n "${args[$conflict]:-}" ]]; then
+            printf "conflicting options: %s cannot be used with %s\n" "$key" "$conflict" >&2
+            exit 1
+          fi
+        done
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--toplevel']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--toplevel requires an argument: --toplevel, -t IDENTIFIER" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
       --window | -w)
         # :flag.conflicts
-        for conflict in --region --geometry; do
+        for conflict in --region --geometry --toplevel; do
           if [[ -n "${args[$conflict]:-}" ]]; then
             printf "conflicting options: %s cannot be used with %s\n" "$key" "$conflict" >&2
             exit 1

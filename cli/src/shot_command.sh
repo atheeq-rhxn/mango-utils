@@ -20,7 +20,9 @@ use_pointer=""
 { [[ ${ini[shot_pointer_default]} == true ]] || [[ ${args[--pointer]} ]]; } && use_pointer=true
 [[ $use_pointer ]] && cmd+=(-c)
 
-if [[ ${args[--window]} ]]; then
+if [[ ${args[--toplevel]} ]]; then
+  cmd+=(-T "${args[--toplevel]}")
+elif [[ ${args[--window]} ]]; then
   if ! command -v mmsg >/dev/null 2>&1; then
     echo "missing dependency: mmsg (required for --window)" >&2
     exit 1
