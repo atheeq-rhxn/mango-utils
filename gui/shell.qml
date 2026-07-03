@@ -82,8 +82,12 @@ Scope {
                             CaptureState.captureArea = "region";
                         },
                         [Qt.Key_W]: () => {
-                            if (CaptureState.isShot)
-                                CaptureState.captureArea = "window";
+                            if (CaptureState.isShot) {
+                                if (CaptureState.captureArea === "window")
+                                    CaptureState.resetWindowChoice();
+                                else
+                                    CaptureState.captureArea = "window";
+                            }
                         },
                         [Qt.Key_F]: () => {
                             CaptureState.captureArea = "screen";
@@ -381,13 +385,7 @@ Scope {
                                 }
                             }
 
-                            IconButton {
-                                iconName: "app-window"
-                                isActive: CaptureState.captureArea === "window"
-                                isEnabled: CaptureState.isShot
-                                activeAccent: CaptureState.accentColor
-                                onClicked: CaptureState.captureArea = "window"
-                            }
+                            WindowButton {}
                             IconButton {
                                 iconName: "device-desktop"
                                 isActive: CaptureState.captureArea === "screen"
@@ -419,6 +417,28 @@ Scope {
                                 onClicked: CaptureService.executeAction()
                             }
                         }
+                    }
+                }
+
+                WindowPicker {
+                    id: windowPicker
+                    anchors.fill: parent
+                    z: 20
+                    active: CaptureState.captureArea === "window" && CaptureState.isShot && !CaptureState.hasChosenWindow
+
+                    onActiveChanged: {
+                        if (!active)
+                            parent.forceActiveFocus();
+                    }
+
+                    onAccepted: (title, identifier, appId) => {
+                        CaptureState.chosenWindowIdentifier = identifier;
+                        CaptureState.chosenWindowTitle = title;
+                        CaptureState.chosenWindowAppId = appId;
+                    }
+
+                    onCancelled: {
+                        CaptureState.captureArea = "region";
                     }
                 }
             }

@@ -38,7 +38,11 @@ Singleton {
             const rh = Math.round(SelectionState.rectHeight);
             a.push("-g", `${rx},${ry} ${rw}x${rh}`);
         } else if (CaptureState.captureArea === "window") {
-            a.push("-w");
+            if (CaptureState.hasChosenWindow) {
+                a.push("-t", CaptureState.chosenWindowIdentifier);
+            } else {
+                a.push("-w");
+            }
         }
 
         if (forShot) {

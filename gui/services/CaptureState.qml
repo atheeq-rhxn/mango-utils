@@ -15,8 +15,20 @@ Singleton {
     property bool mic: false
     property bool audio: false
 
+    property string chosenWindowIdentifier: ""
+    property string chosenWindowTitle: ""
+    property string chosenWindowAppId: ""
+
+    readonly property bool hasChosenWindow: chosenWindowIdentifier !== ""
+
     readonly property color accentColor: isShot ? Config.ssAccent : Config.recAccent
     readonly property color pillBackground: Qt.rgba(Config.surfaceColor.r, Config.surfaceColor.g, Config.surfaceColor.b, 0.88)
+
+    function resetWindowChoice() {
+        chosenWindowIdentifier = "";
+        chosenWindowTitle = "";
+        chosenWindowAppId = "";
+    }
 
     onIsShotChanged: {
         if (!isShot) {
