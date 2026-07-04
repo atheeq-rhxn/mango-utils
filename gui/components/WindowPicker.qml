@@ -221,7 +221,16 @@ Item {
                     return;
                 try {
                     const data = JSON.parse(this.text);
-                    root.windows = data.clients || [];
+                    const clients = data.clients || [];
+                    for (let i = 0; i < clients.length; i++) {
+                        if (clients[i].is_focused) {
+                            const focused = clients.splice(i, 1)[0];
+                            clients.unshift(focused);
+                            break;
+                        }
+                    }
+                    root.windows = clients;
+                    listView.currentIndex = 0;
                 } catch (e) {
                     console.error("WindowPicker: failed to parse mmsg output:", e);
                     root.windows = [];
