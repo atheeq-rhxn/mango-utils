@@ -231,6 +231,8 @@ Item {
                     required property var modelData
                     required property int index
 
+                    readonly property var _winTags: modelData.tags || []
+
                     Rectangle {
                         anchors.fill: parent
                         anchors.margins: 4
@@ -274,14 +276,53 @@ Item {
                                 Layout.fillWidth: true
                                 spacing: 2
 
-                                Text {
+                                RowLayout {
                                     Layout.fillWidth: true
-                                    text: modelData.title || "Untitled"
-                                    color: Config.textColor
-                                    font.pixelSize: 13
-                                    font.weight: Font.Medium
-                                    elide: Text.ElideRight
-                                    maximumLineCount: 1
+                                    spacing: 6
+
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: modelData.title || "Untitled"
+                                        color: Config.textColor
+                                        font.pixelSize: 13
+                                        font.weight: Font.Medium
+                                        elide: Text.ElideRight
+                                        maximumLineCount: 1
+                                    }
+
+                                    Rectangle {
+                                        Layout.alignment: Qt.AlignVCenter
+                                        visible: _winTags.length > 0
+                                        implicitWidth: tagBadge.implicitWidth + 8
+                                        height: 18
+                                        radius: 4
+                                        color: Qt.rgba(1, 1, 1, 0.04)
+
+                                        Text {
+                                            id: tagBadge
+                                            anchors.centerIn: parent
+                                            text: _winTags.join(", ")
+                                            color: Config.textMuted
+                                            font.pixelSize: 10
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        Layout.alignment: Qt.AlignVCenter
+                                        visible: modelData.monitor && modelData.monitor !== ""
+                                        implicitWidth: monBadge.implicitWidth + 8
+                                        height: 18
+                                        radius: 4
+                                        color: Qt.rgba(1, 1, 1, 0.04)
+
+                                        Text {
+                                            id: monBadge
+                                            anchors.centerIn: parent
+                                            text: modelData.monitor || ""
+                                            color: Config.textMuted
+                                            font.pixelSize: 10
+                                        }
+                                    }
                                 }
 
                                 Text {
