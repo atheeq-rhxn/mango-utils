@@ -172,6 +172,7 @@ Item {
             Text {
                 visible: windowProcess.running && root.windows.length === 0
                 Layout.fillWidth: true
+                Layout.fillHeight: true
                 Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                 text: "Loading..."
                 color: Config.textMuted
@@ -183,6 +184,7 @@ Item {
             Text {
                 visible: !windowProcess.running && root.windows.length === 0 && root.active
                 Layout.fillWidth: true
+                Layout.fillHeight: true
                 Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                 text: "No windows found"
                 color: Config.textMuted
@@ -194,6 +196,7 @@ Item {
             Text {
                 visible: filterText !== "" && root.windows.length > 0 && filteredWindows.length === 0
                 Layout.fillWidth: true
+                Layout.fillHeight: true
                 Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
                 text: "No matching windows"
                 color: Config.textMuted
