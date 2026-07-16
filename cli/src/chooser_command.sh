@@ -1,5 +1,13 @@
 select_file="${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR not set}/msnap-chooser"
+preselect_file="${XDG_RUNTIME_DIR}/msnap-preselect"
 trap 'rm -f "$select_file"' EXIT
+
+if [[ -s "$preselect_file" ]]; then
+  selected_id=$(<"$preselect_file")
+  rm -f "$preselect_file" "$select_file"
+  echo "Window: $selected_id"
+  exit 0
+fi
 
 USER_GUI_PATH="${XDG_DATA_HOME:-$HOME/.local/share}/msnap/gui"
 SYS_GUI_PATH="/usr/share/msnap/gui"
