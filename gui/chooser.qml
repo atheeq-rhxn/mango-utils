@@ -25,7 +25,7 @@ Scope {
             active: true
 
             onAccepted: (title, identifier, appId) => {
-                selectionFile.setText(identifier + "\n")
+                selectionFile.setText("Window: " + identifier + "\n")
                 Qt.callLater(Qt.quit)
             }
             onCancelled: {
