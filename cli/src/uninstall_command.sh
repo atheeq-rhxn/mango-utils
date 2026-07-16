@@ -47,21 +47,43 @@ done < <(sort -u "$manifest")
 
 rm -f "$manifest" && echo "Removed manifest: $manifest" || echo "Failed to remove manifest: $manifest" >&2
 
-# Remove portal config if installed by msnap
 PORTAL_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/xdg-desktop-portal-wlr/config"
 if [[ -f "$PORTAL_CONFIG" ]] && grep -q "msnap chooser" "$PORTAL_CONFIG" 2>/dev/null; then
-  if [[ -z "${args[--force]:-}" ]]; then
-    read -p "Remove portal config at $PORTAL_CONFIG? [y/N] " -n 1 -r
-    echo ""
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      echo "Skipped."
+  if [[ -f "$PORTAL_CONFIG.bak" ]]; then
+    if [[ -z "${args[--force]:-}" ]]; then
+      read -p "Restore backup of portal config? [Y/n] " -n 1 -r
+      echo ""
+      if [[ $REPLY =~ ^[Nn]$ ]]; then
+        rm -f "$PORTAL_CONFIG"
+        echo "Removed: $PORTAL_CONFIG"
+      else
+        mv "$PORTAL_CONFIG.bak" "$PORTAL_CONFIG"
+        echo "Restored: $PORTAL_CONFIG"
+      fi
+    else
+      mv "$PORTAL_CONFIG.bak" "$PORTAL_CONFIG"
+      echo "Restored: $PORTAL_CONFIG"
+    fi
+    systemctl --user restart xdg-desktop-portal-wlr 2>/dev/null \
+      || echo "Restart portal: systemctl --user restart xdg-desktop-portal-wlr"
+  else
+    if [[ -z "${args[--force]:-}" ]]; then
+      read -p "Remove portal config? [y/N] " -n 1 -r
+      echo ""
+      if [[ $REPLY =~ ^[Yy]$ ]]; then
+        rm -f "$PORTAL_CONFIG"
+        echo "Removed: $PORTAL_CONFIG"
+        systemctl --user restart xdg-desktop-portal-wlr 2>/dev/null \
+          || echo "Restart portal: systemctl --user restart xdg-desktop-portal-wlr"
+      else
+        echo "Skipped."
+      fi
     else
       rm -f "$PORTAL_CONFIG"
       echo "Removed: $PORTAL_CONFIG"
+      systemctl --user restart xdg-desktop-portal-wlr 2>/dev/null \
+        || echo "Restart portal: systemctl --user restart xdg-desktop-portal-wlr"
     fi
-  else
-    rm -f "$PORTAL_CONFIG"
-    echo "Removed: $PORTAL_CONFIG"
   fi
 fi
 
