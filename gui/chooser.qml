@@ -17,10 +17,10 @@ Scope {
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
         WlrLayershell.exclusionMode: ExclusionMode.Ignore
-        WlrLayershell.namespace: "msnap-picker"
+        WlrLayershell.namespace: "msnap-chooser"
 
         WindowPicker {
-            id: picker
+            id: chooser
             anchors.fill: parent
             active: true
 
@@ -35,10 +35,7 @@ Scope {
 
         FileView {
             id: selectionFile
-            path: {
-                const dir = Quickshell.env("XDG_RUNTIME_DIR") || Quickshell.env("TMPDIR") || "/tmp"
-                return dir + "/msnap-picker-select"
-            }
+            path: Quickshell.env("XDG_RUNTIME_DIR") + "/msnap-chooser"
             blockWrites: true
             printErrors: false
         }
