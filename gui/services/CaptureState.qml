@@ -32,8 +32,6 @@ Singleton {
 
     onIsShotChanged: {
         if (!isShot) {
-            if (captureArea === "window")
-                captureArea = "region";
             SelectionState.cancelInteraction();
             SelectionState.clampToScreen(CaptureService.activeScreen);
         }

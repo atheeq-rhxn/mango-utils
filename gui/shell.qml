@@ -10,10 +10,18 @@ import "services"
 
 Scope {
 
+    FileView {
+        id: preselectFile
+        path: Quickshell.env("XDG_RUNTIME_DIR") + "/msnap-preselect"
+        blockWrites: true
+        printErrors: false
+    }
+
     Component.onCompleted: {
         CaptureService.isLoaded = true;
         if (CaptureState.isShot)
             FreezeState.enter();
+        preselectFile.setText("");
     }
 
     Variants {
@@ -43,7 +51,7 @@ Scope {
                     forceActiveFocus()
 
                 function cycleTarget(dir) {
-                    const modes = CaptureState.isShot ? ["region", "window", "screen"] : ["region", "screen"];
+                    const modes = ["region", "window", "screen"];
                     const i = modes.indexOf(CaptureState.captureArea);
                     CaptureState.captureArea = modes[((i < 0 ? 0 : i) + dir + modes.length) % modes.length];
                 }
@@ -82,12 +90,10 @@ Scope {
                             CaptureState.captureArea = "region";
                         },
                         [Qt.Key_W]: () => {
-                            if (CaptureState.isShot) {
-                                if (CaptureState.captureArea === "window")
-                                    CaptureState.resetWindowChoice();
-                                else
-                                    CaptureState.captureArea = "window";
-                            }
+                            if (CaptureState.captureArea === "window")
+                                CaptureState.resetWindowChoice();
+                            else
+                                CaptureState.captureArea = "window";
                         },
                         [Qt.Key_F]: () => {
                             CaptureState.captureArea = "screen";
@@ -367,17 +373,22 @@ Scope {
                     id: windowPicker
                     anchors.fill: parent
                     z: 20
-                    active: CaptureState.captureArea === "window" && CaptureState.isShot && !CaptureState.hasChosenWindow
+                    active: CaptureState.captureArea === "window" && !CaptureState.hasChosenWindow
 
                     onActiveChanged: {
-                        if (!active)
+                        if (active) {
+                            preselectFile.setText("");
+                        }
+                        if (!active) {
                             parent.forceActiveFocus();
+                        }
                     }
 
                     onAccepted: (title, identifier, appId) => {
                         CaptureState.chosenWindowIdentifier = identifier;
                         CaptureState.chosenWindowTitle = title;
                         CaptureState.chosenWindowAppId = appId;
+                        preselectFile.setText(identifier + "\n");
                     }
 
                     onCancelled: {

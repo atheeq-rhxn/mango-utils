@@ -15,8 +15,6 @@ Rectangle {
     color: CaptureState.captureArea === "window" ? Qt.rgba(CaptureState.accentColor.r, CaptureState.accentColor.g, CaptureState.accentColor.b, 0.15) : "transparent"
     border.width: CaptureState.captureArea === "window" ? 1 : 0
     border.color: CaptureState.accentColor
-    enabled: CaptureState.isShot
-    opacity: enabled ? 1.0 : 0.3
 
     Behavior on Layout.preferredWidth {
         enabled: CaptureService.isLoaded
@@ -77,8 +75,7 @@ Rectangle {
 
     MouseArea {
         anchors.fill: parent
-        enabled: root.enabled
-        cursorShape: root.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+        cursorShape: Qt.PointingHandCursor
         onClicked: {
             if (CaptureState.captureArea === "window")
                 CaptureState.resetWindowChoice();
