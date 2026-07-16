@@ -36,5 +36,5 @@ if [[ ! -s "$select_file" ]]; then
   exit 1
 fi
 
-selected_id=$(<"$select_file")
-echo "Window: $selected_id"
+selected_label=$(<"$select_file")
+echo "$selected_label"
