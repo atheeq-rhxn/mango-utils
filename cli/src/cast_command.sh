@@ -37,7 +37,9 @@ build_cmd() {
     echo "Error: gpu-screen-recorder not found" >&2
     exit 1
   fi
-  if [[ -n "$geometry" ]]; then
+  if [[ ${args[--portal]:-} ]]; then
+    cmd+=(-w portal)
+  elif [[ -n "$geometry" ]]; then
     local x y w h
     IFS=',x ' read -r x y w h <<< "$geometry"
     cmd+=(-w region -region "${w}x${h}+${x}+${y}")

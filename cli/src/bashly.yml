@@ -62,6 +62,10 @@ commands:
     - slurp
     - notify-send
   flags:
+  - long: --portal
+    short: -p
+    help: Record a window via portal selection
+    conflicts: [--region, --geometry]
   - long: --region
     short: -r
     help: Record selected region (interactive selection)

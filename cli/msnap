@@ -148,6 +148,12 @@ msnap_cast_usage() {
 
     # :command.usage_flags
     # :flag.usage
+    printf "  %s\n" "--portal, -p"
+    printf "    Record a window via portal selection\n"
+    printf "    %s\n" "Conflicts: --region, --geometry"
+    echo
+
+    # :flag.usage
     printf "  %s\n" "--region, -r"
     printf "    Record selected region (interactive selection)\n"
     printf "    %s\n" "Conflicts: --geometry"
@@ -737,7 +743,9 @@ msnap_cast_command() {
       echo "Error: gpu-screen-recorder not found" >&2
       exit 1
     fi
-    if [[ -n "$geometry" ]]; then
+    if [[ ${args[--portal]:-} ]]; then
+      cmd+=(-w portal)
+    elif [[ -n "$geometry" ]]; then
       local x y w h
       IFS=',x ' read -r x y w h <<< "$geometry"
       cmd+=(-w region -region "${w}x${h}+${x}+${y}")
@@ -1568,6 +1576,21 @@ msnap_cast_parse_requirements() {
   while [[ $# -gt 0 ]]; do
     key="$1"
     case "$key" in
+      # :flag.case
+      --portal | -p)
+        # :flag.conflicts
+        for conflict in --region --geometry; do
+          if [[ -n "${args[$conflict]:-}" ]]; then
+            printf "conflicting options: %s cannot be used with %s\n" "$key" "$conflict" >&2
+            exit 1
+          fi
+        done
+
+        # :flag.case_no_arg
+        args['--portal']=1
+        shift
+        ;;
+
       # :flag.case
       --region | -r)
         # :flag.conflicts
