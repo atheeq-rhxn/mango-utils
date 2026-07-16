@@ -134,15 +134,22 @@ main() {
     info "Cleaning up..."
     run_quiet make clean
 
-    # Install xdg-desktop-portal-wlr config for portal screen selection
     PORTAL_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/xdg-desktop-portal-wlr"
     PORTAL_CONFIG="$PORTAL_DIR/config"
     PORTAL_FILE="$src_dir/assets/xdpw-config"
 
     if [[ -f "$PORTAL_FILE" ]]; then
         if [[ -f "$PORTAL_CONFIG" ]]; then
-            warn "Backing up existing portal config to $PORTAL_CONFIG.bak"
-            run_quiet cp "$PORTAL_CONFIG" "$PORTAL_CONFIG.bak"
+            if grep -q "msnap chooser" "$PORTAL_CONFIG" 2>/dev/null; then
+                info "Updating existing msnap portal config."
+            else
+                if [[ ! -f "$PORTAL_CONFIG.bak" ]]; then
+                    warn "Backing up existing portal config to $PORTAL_CONFIG.bak"
+                    run_quiet cp "$PORTAL_CONFIG" "$PORTAL_CONFIG.bak"
+                else
+                    info "Backup already exists at $PORTAL_CONFIG.bak, skipping."
+                fi
+            fi
         fi
         install -d "$PORTAL_DIR"
         install -m644 "$PORTAL_FILE" "$PORTAL_CONFIG"
