@@ -47,4 +47,22 @@ done < <(sort -u "$manifest")
 
 rm -f "$manifest" && echo "Removed manifest: $manifest" || echo "Failed to remove manifest: $manifest" >&2
 
+# Remove portal config if installed by msnap
+PORTAL_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/xdg-desktop-portal-wlr/config"
+if [[ -f "$PORTAL_CONFIG" ]] && grep -q "msnap chooser" "$PORTAL_CONFIG" 2>/dev/null; then
+  if [[ -z "${args[--force]:-}" ]]; then
+    read -p "Remove portal config at $PORTAL_CONFIG? [y/N] " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      echo "Skipped."
+    else
+      rm -f "$PORTAL_CONFIG"
+      echo "Removed: $PORTAL_CONFIG"
+    fi
+  else
+    rm -f "$PORTAL_CONFIG"
+    echo "Removed: $PORTAL_CONFIG"
+  fi
+fi
+
 echo "msnap uninstalled."

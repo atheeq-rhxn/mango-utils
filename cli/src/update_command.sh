@@ -153,6 +153,22 @@ if (( failed > 0 )); then
   echo "Warning: $failed file(s) could not be installed (see above)." >&2
 fi
 
+# Update portal config
+PORTAL_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/xdg-desktop-portal-wlr"
+PORTAL_CONFIG="$PORTAL_DIR/config"
+PORTAL_NEW="$src/assets/xdpw-config"
+if [[ -f "$PORTAL_NEW" ]]; then
+  if [[ -f "$PORTAL_CONFIG" ]]; then
+    cp "$PORTAL_CONFIG" "$PORTAL_CONFIG.bak" 2>/dev/null
+    echo "Backed up portal config to $PORTAL_CONFIG.bak"
+  fi
+  install -d "$PORTAL_DIR"
+  install -m644 "$PORTAL_NEW" "$PORTAL_CONFIG"
+  echo "Portal config updated."
+  systemctl --user restart xdg-desktop-portal-wlr 2>/dev/null \
+    || echo "Restart portal: systemctl --user restart xdg-desktop-portal-wlr"
+fi
+
 if [[ "$use_git" == true ]]; then
   echo "msnap updated to commit ${target_version:0:7}."
   notify-send "msnap updated" "Updated to commit ${target_version:0:7}" -a msnap 2>/dev/null || true

@@ -29,6 +29,7 @@ msnap_usage() {
   printf "  %s   Take a screenshot\n" "shot     "
   printf "  %s   Record the screen\n" "cast     "
   printf "  %s   Launch the graphical interface\n" "gui      "
+  printf "  %s   Portal source chooser\n" "chooser  "
   printf "  %s   Uninstall msnap\n" "uninstall"
   printf "  %s   Update msnap to the latest version\n" "update   "
   echo
@@ -265,6 +266,28 @@ msnap_gui_usage() {
     printf "  %s\n" "--no-freeze"
     printf "    Skip screen freeze (no wayfreeze)\n"
     echo
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "--help, -h"
+    printf "    Show this help\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+msnap_chooser_usage() {
+  printf "msnap chooser - Portal source chooser\n\n"
+
+  printf "%s\n" "Usage:"
+  printf "  msnap chooser\n"
+  printf "  msnap chooser --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    # :command.usage_options
+    printf "%s\n" "Options:"
 
     # :command.usage_fixed_flags
     printf "  %s\n" "--help, -h"
@@ -816,6 +839,45 @@ msnap_gui_command() {
 }
 
 # :command.function
+msnap_chooser_command() {
+
+  # src/chooser_command.sh
+  select_file="${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR not set}/msnap-chooser"
+  trap 'rm -f "$select_file"' EXIT
+
+  USER_GUI_PATH="${XDG_DATA_HOME:-$HOME/.local/share}/msnap/gui"
+  SYS_GUI_PATH="/usr/share/msnap/gui"
+  INJECTED_GUI_PATH="@GUI_PATH@"
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+  LOCAL_GUI_PATH="$REPO_ROOT/gui"
+
+  if [[ "$INJECTED_GUI_PATH" != "@"*GUI_PATH@ && -d "$INJECTED_GUI_PATH" ]]; then
+    TARGET_DIR="$INJECTED_GUI_PATH"
+  elif [[ -d "$USER_GUI_PATH" ]]; then
+    TARGET_DIR="$USER_GUI_PATH"
+  elif [[ -d "$SYS_GUI_PATH" ]]; then
+    TARGET_DIR="$SYS_GUI_PATH"
+  elif [[ -d "$LOCAL_GUI_PATH" ]]; then
+    TARGET_DIR="$LOCAL_GUI_PATH"
+  else
+    echo "Error: Cannot find msnap GUI assets." >&2
+    exit 1
+  fi
+
+  rm -f "$select_file"
+  qs -p "$TARGET_DIR/chooser.qml" >&2
+
+  if [[ ! -s "$select_file" ]]; then
+    exit 1
+  fi
+
+  selected_id=$(<"$select_file")
+  echo "Window: $selected_id"
+
+}
+
+# :command.function
 msnap_uninstall_command() {
 
   # src/uninstall_command.sh
@@ -867,6 +929,24 @@ msnap_uninstall_command() {
   done < <(sort -u "$manifest")
 
   rm -f "$manifest" && echo "Removed manifest: $manifest" || echo "Failed to remove manifest: $manifest" >&2
+
+  # Remove portal config if installed by msnap
+  PORTAL_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/xdg-desktop-portal-wlr/config"
+  if [[ -f "$PORTAL_CONFIG" ]] && grep -q "msnap chooser" "$PORTAL_CONFIG" 2>/dev/null; then
+    if [[ -z "${args[--force]:-}" ]]; then
+      read -p "Remove portal config at $PORTAL_CONFIG? [y/N] " -n 1 -r
+      echo ""
+      if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Skipped."
+      else
+        rm -f "$PORTAL_CONFIG"
+        echo "Removed: $PORTAL_CONFIG"
+      fi
+    else
+      rm -f "$PORTAL_CONFIG"
+      echo "Removed: $PORTAL_CONFIG"
+    fi
+  fi
 
   echo "msnap uninstalled."
 
@@ -1031,6 +1111,22 @@ msnap_update_command() {
     echo "Warning: $failed file(s) could not be installed (see above)." >&2
   fi
 
+  # Update portal config
+  PORTAL_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/xdg-desktop-portal-wlr"
+  PORTAL_CONFIG="$PORTAL_DIR/config"
+  PORTAL_NEW="$src/assets/xdpw-config"
+  if [[ -f "$PORTAL_NEW" ]]; then
+    if [[ -f "$PORTAL_CONFIG" ]]; then
+      cp "$PORTAL_CONFIG" "$PORTAL_CONFIG.bak" 2>/dev/null
+      echo "Backed up portal config to $PORTAL_CONFIG.bak"
+    fi
+    install -d "$PORTAL_DIR"
+    install -m644 "$PORTAL_NEW" "$PORTAL_CONFIG"
+    echo "Portal config updated."
+    systemctl --user restart xdg-desktop-portal-wlr 2>/dev/null \
+      || echo "Restart portal: systemctl --user restart xdg-desktop-portal-wlr"
+  fi
+
   if [[ "$use_git" == true ]]; then
     echo "msnap updated to commit ${target_version:0:7}."
     notify-send "msnap updated" "Updated to commit ${target_version:0:7}" -a msnap 2>/dev/null || true
@@ -1091,6 +1187,13 @@ parse_requirements() {
       action="gui"
       shift
       msnap_gui_parse_requirements "$@"
+      shift $#
+      ;;
+
+    chooser)
+      action="chooser"
+      shift
+      msnap_chooser_parse_requirements "$@"
       shift $#
       ;;
 
@@ -1779,6 +1882,67 @@ msnap_gui_parse_requirements() {
 }
 
 # :command.parse_requirements
+msnap_chooser_parse_requirements() {
+  local key
+
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        msnap_chooser_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.dependencies_filter
+  missing_deps=
+  # :dependency.filter
+  if ! command -v qs >/dev/null 2>&1; then
+    printf "missing dependency: qs\n" >&2
+    missing_deps=1
+  else
+    deps['qs']="$(command -v qs | head -n1)"
+  fi
+
+  if [[ -n $missing_deps ]]; then
+    exit 1
+  fi
+
+  # :command.command_filter
+  action="chooser"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+}
+
+# :command.parse_requirements
 msnap_uninstall_parse_requirements() {
   local key
 
@@ -2008,6 +2172,7 @@ run() {
     "shot") msnap_shot_command ;;
     "cast") msnap_cast_command ;;
     "gui") msnap_gui_command ;;
+    "chooser") msnap_chooser_command ;;
     "uninstall") msnap_uninstall_command ;;
     "update") msnap_update_command ;;
   esac

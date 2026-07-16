@@ -141,6 +141,11 @@ commands:
   - long: --no-freeze
     help: Skip screen freeze (no wayfreeze)
 
+- name: chooser
+  help: Portal source chooser
+  dependencies:
+    - qs
+
 - name: uninstall
   help: Uninstall msnap
   dependencies:
