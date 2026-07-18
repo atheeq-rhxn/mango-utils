@@ -9,24 +9,58 @@ Item {
     id: root
 
     property bool active: false
+    property bool showMonitors: false
     property var windows: []
+    property var monitors: []
     property int generation: 0
     property string filterText: ""
+    property string selectedType: "window"
 
-    readonly property var filteredWindows: {
-        if (!filterText) return root.windows;
+    readonly property var filteredList: {
+        const items = [];
+
+        for (let i = 0; i < root.monitors.length; i++) {
+            const m = root.monitors[i];
+            items.push({
+                _type: "monitor",
+                title: m.name || "Unknown",
+                identifier: m.name || "",
+                subtitle: m.width + " × " + m.height,
+                _originalIndex: i
+            });
+        }
+
+        for (let i = 0; i < root.windows.length; i++) {
+            const w = root.windows[i];
+            items.push({
+                _type: "window",
+                title: w.title || "Untitled",
+                identifier: w.foreign_toplevel_id || "",
+                subtitle: w.appid || "",
+                appid: w.appid || "",
+                tags: w.tags || [],
+                monitor: w.monitor || "",
+                foreign_toplevel_id: w.foreign_toplevel_id || "",
+                _originalIndex: i
+            });
+        }
+
+        if (!filterText)
+            return items;
+
         const q = filterText.toLowerCase().trim();
-        if (!q) return root.windows;
+        if (!q)
+            return items;
 
         const terms = q.split(/\s+/).filter(t => t);
         const scored = [];
 
-        for (let i = 0; i < root.windows.length; i++) {
-            const w = root.windows[i];
-            const title = (w.title || "").toLowerCase();
-            const appid = (w.appid || "").toLowerCase();
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const title = (item.title || "").toLowerCase();
+            const subtitle = (item.subtitle || "").toLowerCase();
 
-            if (!terms.every(t => title.includes(t) || appid.includes(t)))
+            if (!terms.every(t => title.includes(t) || subtitle.includes(t)))
                 continue;
 
             let score = 0;
@@ -37,11 +71,11 @@ Item {
             else
                 score = 1;
 
-            scored.push({ window: w, score, originalIndex: i });
+            scored.push({ item, score, originalIndex: i });
         }
 
         scored.sort((a, b) => b.score - a.score || a.originalIndex - b.originalIndex);
-        return scored.map(s => s.window);
+        return scored.map(s => s.item);
     }
 
     signal accepted(string title, string identifier, string appId)
@@ -55,15 +89,22 @@ Item {
             searchBar.text = "";
             listView.currentIndex = 0;
             root.windows = [];
+            root.monitors = [];
             root.generation++;
             windowProcess.command = ["mmsg", "get", "all-clients"];
             windowProcess.running = true;
+            if (root.showMonitors) {
+                monitorProcess.command = ["mmsg", "get", "all-monitors"];
+                monitorProcess.running = true;
+            }
             Qt.callLater(() => {
                 searchBar.forceActiveFocus();
             });
         } else {
             if (windowProcess.running)
                 windowProcess.running = false;
+            if (monitorProcess.running)
+                monitorProcess.running = false;
         }
     }
 
@@ -95,16 +136,20 @@ Item {
             SearchBar {
                 id: searchBar
                 keyForwardTarget: listView
+                placeholderText: root.showMonitors ? "Search windows, monitors..." : "Search windows..."
 
                 onInputChanged: text => {
                     root.filterText = text;
-                    if (listView.currentIndex >= root.filteredWindows.length)
-                        listView.currentIndex = Math.max(0, root.filteredWindows.length - 1);
+                    if (listView.currentIndex >= root.filteredList.length)
+                        listView.currentIndex = Math.max(0, root.filteredList.length - 1);
                 }
             }
 
             Text {
-                visible: windowProcess.running && root.windows.length === 0
+                visible: {
+                    const loading = windowProcess.running || (root.showMonitors && monitorProcess.running);
+                    return loading && root.filteredList.length === 0;
+                }
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
@@ -116,11 +161,14 @@ Item {
             }
 
             Text {
-                visible: !windowProcess.running && root.windows.length === 0 && root.active
+                visible: {
+                    const done = !windowProcess.running && (!root.showMonitors || !monitorProcess.running);
+                    return done && root.filteredList.length === 0 && root.active;
+                }
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
-                text: "No windows found"
+                text: root.showMonitors ? "No windows or monitors found" : "No windows found"
                 color: Config.textMuted
                 font.pixelSize: 13
                 horizontalAlignment: Text.AlignHCenter
@@ -128,11 +176,11 @@ Item {
             }
 
             Text {
-                visible: filterText !== "" && root.windows.length > 0 && root.filteredWindows.length === 0
+                visible: filterText !== "" && root.filteredList.length === 0
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
-                text: "No matching windows"
+                text: "No matching items"
                 color: Config.textMuted
                 font.pixelSize: 13
                 horizontalAlignment: Text.AlignHCenter
@@ -141,11 +189,11 @@ Item {
 
             ListView {
                 id: listView
-                visible: root.filteredWindows.length > 0
+                visible: root.filteredList.length > 0
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
-                model: root.filteredWindows
+                model: root.filteredList
                 currentIndex: 0
                 highlightMoveDuration: 100
                 interactive: true
@@ -162,7 +210,7 @@ Item {
                     }
                 }
 
-                delegate:                 ChooserDelegate {
+                delegate: ChooserDelegate {
                     rowHeight: ListView.view.rowHeight
 
                     onClicked: {
@@ -177,7 +225,7 @@ Item {
                     event.accepted = true;
                 }
                 Keys.onDownPressed: event => {
-                    if (currentIndex < root.filteredWindows.length - 1)
+                    if (currentIndex < root.filteredList.length - 1)
                         currentIndex++;
                     event.accepted = true;
                 }
@@ -198,9 +246,10 @@ Item {
     }
 
     function selectCurrent() {
-        const w = root.filteredWindows[listView.currentIndex];
-        if (w) {
-            root.accepted(w.title || "Untitled", w.foreign_toplevel_id, w.appid || "");
+        const item = root.filteredList[listView.currentIndex];
+        if (item) {
+            root.selectedType = item._type;
+            root.accepted(item.title, item.identifier, item.appid || "");
         }
     }
 
@@ -229,6 +278,33 @@ Item {
                 } catch (e) {
                     console.error("Chooser: failed to parse mmsg output:", e);
                     root.windows = [];
+                }
+            }
+        }
+
+        onRunningChanged: {
+            if (running)
+                lastGeneration = root.generation;
+        }
+    }
+
+    Process {
+        id: monitorProcess
+        running: false
+
+        property int lastGeneration: 0
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (monitorProcess.lastGeneration !== root.generation)
+                    return;
+                try {
+                    const data = JSON.parse(this.text);
+                    root.monitors = data.monitors || [];
+                    listView.currentIndex = 0;
+                } catch (e) {
+                    console.error("Chooser: failed to parse monitor output:", e);
+                    root.monitors = [];
                 }
             }
         }

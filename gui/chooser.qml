@@ -23,9 +23,11 @@ Scope {
             id: chooser
             anchors.fill: parent
             active: true
+            showMonitors: true
 
             onAccepted: (title, identifier, appId) => {
-                selectionFile.setText("Window: " + identifier + "\n")
+                const label = chooser.selectedType === "monitor" ? "Monitor: " : "Window: ";
+                selectionFile.setText(label + identifier + "\n")
                 Qt.callLater(Qt.quit)
             }
             onCancelled: {

@@ -17,6 +17,7 @@ Item {
     width: ListView.view.width
     height: root.rowHeight
 
+    readonly property bool _isMonitor: modelData._type === "monitor"
     readonly property var _winTags: modelData.tags || []
 
     Rectangle {
@@ -37,7 +38,7 @@ Item {
                 radius: 6
                 color: Qt.rgba(Config.ssAccent.r, Config.ssAccent.g, Config.ssAccent.b, 0.08)
 
-                readonly property string resolvedIcon: Quickshell.iconPath(modelData.appid, true)
+                readonly property string resolvedIcon: root._isMonitor ? "" : Quickshell.iconPath(modelData.appid, true)
 
                 Image {
                     visible: parent.resolvedIcon !== ""
@@ -50,11 +51,11 @@ Item {
                 }
 
                 Icon {
-                    visible: parent.resolvedIcon === ""
                     anchors.centerIn: parent
-                    name: "app-window"
+                    name: root._isMonitor ? "device-desktop" : "app-window"
                     size: 18
                     color: Config.textMuted
+                    visible: parent.resolvedIcon === ""
                 }
             }
 
@@ -78,7 +79,7 @@ Item {
 
                     Rectangle {
                         Layout.alignment: Qt.AlignVCenter
-                        visible: root._winTags.length > 0
+                        visible: !root._isMonitor && root._winTags.length > 0
                         implicitWidth: tagBadge.implicitWidth + 8
                         height: 18
                         radius: 4
@@ -95,7 +96,24 @@ Item {
 
                     Rectangle {
                         Layout.alignment: Qt.AlignVCenter
-                        visible: modelData.monitor && modelData.monitor !== ""
+                        visible: root._isMonitor
+                        implicitWidth: typeBadge.implicitWidth + 8
+                        height: 18
+                        radius: 4
+                        color: Qt.rgba(1, 1, 1, 0.04)
+
+                        Text {
+                            id: typeBadge
+                            anchors.centerIn: parent
+                            text: "Monitor"
+                            color: Config.textMuted
+                            font.pixelSize: 10
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.alignment: Qt.AlignVCenter
+                        visible: !root._isMonitor && modelData.monitor && modelData.monitor !== ""
                         implicitWidth: monBadge.implicitWidth + 8
                         height: 18
                         radius: 4
@@ -113,7 +131,7 @@ Item {
 
                 Text {
                     Layout.fillWidth: true
-                    text: modelData.appid || ""
+                    text: root._isMonitor ? (modelData.subtitle || "") : (modelData.appid || "")
                     color: Config.textMuted
                     font.pixelSize: 11
                     elide: Text.ElideRight
