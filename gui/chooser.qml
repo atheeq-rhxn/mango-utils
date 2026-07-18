@@ -19,7 +19,7 @@ Scope {
         WlrLayershell.exclusionMode: ExclusionMode.Ignore
         WlrLayershell.namespace: "msnap-chooser"
 
-        WindowPicker {
+        Chooser {
             id: chooser
             anchors.fill: parent
             active: true

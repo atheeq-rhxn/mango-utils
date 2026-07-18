@@ -369,7 +369,7 @@ Scope {
                     }
                 }
 
-                WindowPicker {
+                Chooser {
                     id: windowPicker
                     anchors.fill: parent
                     z: 20
