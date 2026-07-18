@@ -17,7 +17,7 @@ version_command() {
 
 # :command.usage
 msnap_usage() {
-  printf "msnap - Mango snap - screenshot and screencast tool\n\n"
+  printf "msnap - screenshot and screencast tool for mangowm\n\n"
 
   printf "%s\n" "Usage:"
   printf "  msnap COMMAND\n"
@@ -2192,7 +2192,7 @@ msnap_update_parse_requirements() {
 
 # :command.initialize
 initialize() {
-  declare -g version="0.5.1"
+  declare -g version="0.6.0"
   set -e
 
   # src/initialize.sh
