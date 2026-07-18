@@ -48,24 +48,25 @@ stdenvNoCC.mkDerivation (finalAttrs: {
       --replace-fail '#!/usr/bin/env bash' '#!${bash}/bin/bash'
 
     wrapProgram "$out/bin/msnap" \
-      --prefix PATH : ${lib.makeBinPath [
-        grim
-        slurp
-        wl-clipboard
-        libnotify
-        wayfreeze
-        satty
-        gpu-screen-recorder
-        ffmpeg
-        quickshell
-      ]}
+      --prefix PATH : ${
+        lib.makeBinPath [
+          grim
+          slurp
+          wl-clipboard
+          libnotify
+          wayfreeze
+          satty
+          gpu-screen-recorder
+          ffmpeg
+          quickshell
+        ]
+      }
   '';
 
   meta = {
     description = "Screenshot and screencast utility for mangowm";
     homepage = "https://github.com/xtheeq/msnap";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ ];
     platforms = lib.platforms.linux;
     mainProgram = "msnap";
   };
