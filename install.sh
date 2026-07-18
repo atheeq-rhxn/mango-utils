@@ -160,8 +160,8 @@ main() {
         if systemctl --user restart xdg-desktop-portal-wlr 2>/dev/null; then
             info "Portal restarted."
         else
-            warn "Could not restart portal. Run manually:"
-            echo "    systemctl --user restart xdg-desktop-portal-wlr"
+            warn "Could not restart portal automatically."
+            echo "    Re-login or reboot required for changes to apply."
         fi
     fi
 
