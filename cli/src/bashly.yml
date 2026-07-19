@@ -1,6 +1,6 @@
 name: msnap
 help: screenshot and screencast tool for mangowm
-version: 0.6.0
+version: 0.6.1
 
 commands:
 - name: shot
