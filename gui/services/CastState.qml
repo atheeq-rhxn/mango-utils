@@ -59,6 +59,7 @@ Singleton {
         path: Config.pidFilePath
         watchChanges: true
         printErrors: false
+        onFileChanged: reload()
         onLoaded: {
             isCasting = true;
             showCastAlert = true;

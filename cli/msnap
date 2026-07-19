@@ -520,6 +520,18 @@ ini_keys() {
 }
 
 # src/lib/notify.sh
+notify_error() {
+  local title="$1"
+  local msg="$2"
+
+  (
+    notify-send "$title" "$msg" \
+      -u critical \
+      -i "video-x-generic" \
+      -a "msnap"
+  ) </dev/null >/dev/null 2>&1 &
+}
+
 notify_saved() {
   local fp="$1"
   local msg="$2"
@@ -780,7 +792,9 @@ msnap_cast_command() {
     if [[ -f "$recording_filepath_file" ]]; then
       filepath=$(<"$recording_filepath_file")
       rm -f "$recording_filepath_file"
-      notify_saved "$filepath" "Recording saved in <i>${filepath}</i>." "cast"
+      if [[ -f "$filepath" ]]; then
+        notify_saved "$filepath" "Recording saved in <i>${filepath}</i>." "cast"
+      fi
     fi
   else
     filename="$(date +"$filename_pattern")"
@@ -789,7 +803,19 @@ msnap_cast_command() {
     echo "$filepath" > "$recording_filepath_file"
     date +%s > "/tmp/msnap-cast.starttime"
     build_cmd
-    "${cmd[@]}" > /dev/null 2>&1 &
+
+    (
+      set +e
+      "${cmd[@]}" > /tmp/msnap-cast.log 2>&1
+      rc=$?
+      if [[ -f "$recording_pid_file" ]]; then
+        rm -f "$recording_pid_file" "$recording_filepath_file" "/tmp/msnap-cast.starttime"
+        if [[ $rc -ne 0 ]]; then
+          notify_error "Recording lost" \
+            "gpu-screen-recorder crashed. See <i>/tmp/msnap-cast.log</i>."
+        fi
+      fi
+    ) &
     echo $! > "$recording_pid_file"
   fi
 

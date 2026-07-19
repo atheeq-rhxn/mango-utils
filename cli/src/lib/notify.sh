@@ -1,3 +1,15 @@
+notify_error() {
+  local title="$1"
+  local msg="$2"
+
+  (
+    notify-send "$title" "$msg" \
+      -u critical \
+      -i "video-x-generic" \
+      -a "msnap"
+  ) </dev/null >/dev/null 2>&1 &
+}
+
 notify_saved() {
   local fp="$1"
   local msg="$2"
